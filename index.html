@@ -65,7 +65,7 @@ body {
 .page-inner {
   position: relative;
   z-index: 2;
-  padding: 2mm 6mm 12mm;
+  padding: 13mm 10mm 12mm;  /* matches filled-inner */
   display: flex;
   flex-direction: column;
   height: 210mm;
@@ -133,14 +133,16 @@ body {
 .sl-purple { background: var(--deep-purple); }
 .sl-orange { background: var(--deep-orange); }
 
-/* ── CARD ── */
+/* ── CARD — matches .filled-card layout ── */
 .card {
   background: rgba(255,255,255,0.60);
   border-radius: 12px;
-  padding: 4px 7px 5px;
-  margin-bottom: 3px;
+  padding: 6px 10px;
   border-left: 4px solid var(--pink);
   box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-evenly;
 }
 .card.c-green  { border-left-color: var(--deep-green); }
 .card.c-blue   { border-left-color: var(--deep-blue); }
@@ -181,16 +183,20 @@ textarea {
   background: rgba(255,255,255,0.0);
   transition: border-color 0.2s, box-shadow 0.2s;
   outline: none;
-  resize: vertical;
+  resize: none;
+  overflow: auto;         /* must be auto/scroll so scrollHeight > clientHeight works */
+  scrollbar-width: none; /* Firefox */
 }
+textarea::-webkit-scrollbar { display: none; } /* Chrome / Safari */
 input[type="text"]:focus,
 textarea:focus {
   border-color: var(--pink);
   box-shadow: 0 0 0 2px rgba(244,114,182,0.2);
 }
+/* base textarea — height now comes from flex layout; min-height as fallback */
 textarea { min-height: 28px; line-height: 1.4; }
 textarea.tall { min-height: 42px; }
-textarea.short { min-height: 24px; }
+textarea.short { min-height: 0; flex: 1; }
 
 /* title row for Dr. field */
 .title-row {
@@ -450,7 +456,7 @@ textarea.short { min-height: 24px; }
 .filled-inner {
   position: relative;
   z-index: 2;
-  padding: 2mm 6mm 12mm;
+  padding: 13mm 10mm 12mm;
   display: flex;
   flex-direction: column;
   height: 210mm;
@@ -474,10 +480,13 @@ textarea.short { min-height: 24px; }
 .filled-card {
   background: rgba(255,255,255,0.60);
   border-radius: 12px;
-  padding: 4px 7px 5px;
+  padding: 6px 10px;
   border-left: 4px solid var(--deep-pink);
   box-shadow: 0 2px 8px rgba(0,0,0,0.07);
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-evenly;
 }
 .filled-card.c-orange { border-left-color: var(--deep-orange); }
 .filled-card.c-blue   { border-left-color: var(--deep-blue); }
@@ -485,7 +494,7 @@ textarea.short { min-height: 24px; }
 .filled-card.c-purple { border-left-color: var(--deep-purple); }
 
 .filled-card .q {
-  font-size: 0.58rem;
+  font-size: 1.0rem;
   font-weight: 900;
   color: #888;
   line-height: 1.2;
@@ -493,8 +502,8 @@ textarea.short { min-height: 24px; }
   font-family: 'Comic Sans MS', cursive;
 }
 .filled-card .a {
-  font-size: 0.78rem;
-  font-weight: 600;
+  font-size: 1.0rem;
+  font-weight: 400;
   color: var(--dark);
   line-height: 1.35;
   font-family: 'Comic Sans MS', cursive;
@@ -503,11 +512,12 @@ textarea.short { min-height: 24px; }
 }
 
 .filled-photo {
-  width: 100%;
-  max-height: 80px;
-  object-fit: cover;
-  border-radius: 8px;
-  margin-bottom: 4px;
+  max-width: 100%;
+  max-height: 84mm; /* 2/5 of 210mm page height */
+  width: auto;
+  height: auto;
+  display: block;
+  margin: 0 auto;
 }
 
 /* ── FORM VIEW ── */
@@ -622,29 +632,27 @@ textarea.short { min-height: 24px; }
         <!-- OVER JOU -->
         <div class="label-wrap"><div class="section-label sl-orange" style="margin-top:5px;">Over Jou</div></div>
 
-        <div class="card c-orange">
-          <label for="fn">Naam ✨</label>
-          <input type="text" id="fn" name="name">
-        </div>
-
-        <div class="card c-orange">
-          <label for="how">Waar ken ik Eline van 🤝</label>
-          <input type="text" id="how" name="how">
-        </div>
-
-        <div class="card c-orange">
-          <label for="hobbies">Mijn hobby's / passies 🌟</label>
-          <textarea id="hobbies" name="hobbies" class="short"></textarea>
-        </div>
-
-        <div class="card c-orange">
-          <label for="food">Mijn lievelingseten 🍅</label>
-          <input type="text" id="food" name="food">
-        </div>
-
-        <div class="card c-orange">
-          <label for="future-self">Als ik later groot ben, wil ik worden 🚀</label>
-          <input type="text" id="future-self" name="future-self">
+        <div class="card c-orange" style="flex:1;gap:6px;">
+          <div style="display:flex;flex-direction:column;">
+            <label for="fn">Naam ✨</label>
+            <input type="text" id="fn" name="name">
+          </div>
+          <div style="display:flex;flex-direction:column;">
+            <label for="how">Waar ken ik Eline van 🤝</label>
+            <input type="text" id="how" name="how">
+          </div>
+          <div style="display:flex;flex-direction:column;flex:1;">
+            <label for="hobbies">Mijn hobby's / passies 🌟</label>
+            <textarea id="hobbies" name="hobbies" class="short"></textarea>
+          </div>
+          <div style="display:flex;flex-direction:column;">
+            <label for="food">Mijn lievelingseten 🍅</label>
+            <input type="text" id="food" name="food">
+          </div>
+          <div style="display:flex;flex-direction:column;">
+            <label for="future-self">Als ik later groot ben, wil ik worden 🚀</label>
+            <input type="text" id="future-self" name="future-self">
+          </div>
         </div>
 
       </div><!-- /left -->
@@ -655,24 +663,24 @@ textarea.short { min-height: 24px; }
         <!-- OVER ELINE -->
         <div class="label-wrap"><div class="section-label sl-pink">Over Eline</div></div>
 
-        <div class="card c-pink" style="display:flex;flex-direction:column;gap:6px;">
-          <div>
+        <div class="card c-pink" style="gap:6px;">
+          <div style="display:flex;flex-direction:column;flex:1;">
             <label for="memory">Mijn meest iconische herinnering aan Eline 💭</label>
             <textarea id="memory" name="memory" class="short"></textarea>
           </div>
-          <div>
+          <div style="display:flex;flex-direction:column;">
             <label for="words">Omschrijf Eline in 3 woorden 🎨</label>
             <input type="text" id="words" name="words">
           </div>
-          <div>
+          <div style="display:flex;flex-direction:column;flex:1;">
             <label for="unique">Wat maakt Eline uniek volgens mij ✨</label>
             <textarea id="unique" name="unique" class="short"></textarea>
           </div>
-          <div>
+          <div style="display:flex;flex-direction:column;flex:1;">
             <label for="learned">Dit heb ik van Eline geleerd (bewust of onbewust) 🌱</label>
             <textarea id="learned" name="learned" class="short"></textarea>
           </div>
-          <div>
+          <div style="display:flex;flex-direction:column;">
             <label for="song">Dit liedje doet mij denken aan Eline 🎶</label>
             <input type="text" id="song" name="song">
           </div>
@@ -681,8 +689,8 @@ textarea.short { min-height: 24px; }
         <!-- TOEKOMST & PHD -->
         <div class="label-wrap"><div class="section-label sl-blue" style="margin-top:5px;">Toekomst &amp; PhD-twist</div></div>
 
-        <div class="card c-blue" style="display:flex;flex-direction:column;gap:6px;flex:1;">
-          <div>
+        <div class="card c-blue" style="gap:6px;">
+          <div style="display:flex;flex-direction:column;flex:1;">
             <label for="future">Wat zie ik Eline over 5 jaar doen 🔭</label>
             <textarea id="future" name="future" class="short"></textarea>
           </div>
@@ -706,7 +714,7 @@ textarea.short { min-height: 24px; }
               </span>
             </div>
           </div>
-          <div>
+          <div style="display:flex;flex-direction:column;">
             <label for="research-theme">Als Eline een onderzoeksthema was, zou ze heten 🏷️</label>
             <input type="text" id="research-theme" name="research-theme" placeholder="Bijv. 'De Fietsdynamiek van Geluk'...">
           </div>
@@ -830,6 +838,9 @@ function renderBook() {
   btnNext.disabled = currentPage === entries.length - 1;
 
   container.innerHTML = renderFilledPage(e);
+
+  // After the DOM is painted, shrink any overflowing answer text
+  requestAnimationFrame(() => shrinkFilledAnswers(container));
 }
 
 function prevPage() { currentPage--; renderBook(); }
@@ -852,14 +863,14 @@ function renderFilledPage(e) {
         <!-- LEFT -->
         <div class="filled-col">
           <div class="label-wrap"><div class="section-label sl-pink">Jouw Foto</div></div>
-          <div class="filled-card c-purple" style="flex:0 0 auto; text-align:center; padding:6px;">
+          <div class="filled-card c-purple" style="flex:0 0 auto; padding:6px; text-align:center;">
             ${e.photo_url
               ? `<img src="${e.photo_url}" class="filled-photo" alt="foto">`
               : '<span style="font-size:2rem;">📷</span>'}
           </div>
 
           <div class="label-wrap"><div class="section-label sl-orange" style="margin-top:4px;">Over Jou</div></div>
-          <div class="filled-card c-orange" style="display:flex;flex-direction:column;gap:3px;">
+          <div class="filled-card c-orange" style="display:flex;flex-direction:column;">
             <div><div class="q">Naam</div><div class="a">${val(e.naam)}</div></div>
             <div><div class="q">Waar ken ik Eline van</div><div class="a">${val(e.waar_ken_ik_eline)}</div></div>
             <div><div class="q">Hobby's / passies</div><div class="a">${val(e.hobbies)}</div></div>
@@ -871,7 +882,7 @@ function renderFilledPage(e) {
         <!-- RIGHT -->
         <div class="filled-col">
           <div class="label-wrap"><div class="section-label sl-pink">Over Eline</div></div>
-          <div class="filled-card c-pink" style="display:flex;flex-direction:column;gap:3px;">
+          <div class="filled-card c-pink" style="display:flex;flex-direction:column;">
             <div><div class="q">Meest iconische herinnering</div><div class="a">${val(e.herinnering)}</div></div>
             <div><div class="q">Eline in 3 woorden</div><div class="a">${val(e.drie_woorden)}</div></div>
             <div><div class="q">Wat maakt Eline uniek</div><div class="a">${val(e.uniek)}</div></div>
@@ -880,7 +891,7 @@ function renderFilledPage(e) {
           </div>
 
           <div class="label-wrap"><div class="section-label sl-blue" style="margin-top:4px;">Toekomst &amp; PhD-twist</div></div>
-          <div class="filled-card c-blue" style="display:flex;flex-direction:column;gap:3px;">
+          <div class="filled-card c-blue" style="display:flex;flex-direction:column;">
             <div><div class="q">Wat zie ik Eline over 5 jaar doen</div><div class="a">${val(e.vijf_jaar)}</div></div>
             <div><div class="q">Eline na haar PhD is vooral</div><div class="a">${(e.phd_type||[]).join(', ') || '—'}</div></div>
             <div><div class="q">Als Eline een onderzoeksthema was</div><div class="a">${val(e.onderzoeksthema)}</div></div>
@@ -980,6 +991,45 @@ async function afterSave() {
   showBook();
   currentPage = entries.length - 1;
   renderBook();
+}
+
+// ══════════════════════════════════════════════
+// AUTO-SHRINK: reduce font size until text fits
+// ══════════════════════════════════════════════
+const MIN_FONT_PX = 6.5;
+
+function autoShrinkTextarea(el) {
+  // Reset to the stylesheet font size first
+  el.style.fontSize = '';
+  const basePx = parseFloat(window.getComputedStyle(el).fontSize);
+  let size = basePx;
+  // Iteratively shrink until content fits inside the fixed box
+  while (el.scrollHeight > el.clientHeight + 2 && size > MIN_FONT_PX) {
+    size = Math.max(MIN_FONT_PX, size - 0.5);
+    el.style.fontSize = size + 'px';
+  }
+}
+
+// Apply to all form textareas on every keystroke.
+// Left-column textareas use their own independent fixed height (flex:1 within
+// their own column) so they are never affected by changes in the right column.
+document.querySelectorAll('#booklet textarea').forEach(ta => {
+  ta.addEventListener('input', () => autoShrinkTextarea(ta));
+});
+
+// Auto-shrink the read-only .a text blocks in the filled book pages
+function shrinkFilledAnswers(container) {
+  container.querySelectorAll('.filled-card .a').forEach(el => {
+    el.style.fontSize = '';
+    const basePx = parseFloat(window.getComputedStyle(el).fontSize);
+    let size = basePx;
+    // Shrink until the element no longer overflows its parent card
+    const card = el.closest('.filled-card');
+    while (card && el.scrollHeight > card.clientHeight + 4 && size > MIN_FONT_PX) {
+      size = Math.max(MIN_FONT_PX, size - 0.5);
+      el.style.fontSize = size + 'px';
+    }
+  });
 }
 
 // ══════════════════════════════════════════════

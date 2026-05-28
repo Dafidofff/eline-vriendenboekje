@@ -535,10 +535,17 @@ textarea.short { min-height: 0; flex: 1; }
 
 .book-nav {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 20px;
+  gap: 12px;
   margin-bottom: 16px;
   font-family: 'Comic Sans MS', cursive;
+}
+
+.book-nav-pager {
+  display: flex;
+  align-items: center;
+  gap: 20px;
 }
 
 .book-nav button {
@@ -566,7 +573,6 @@ textarea.short { min-height: 0; flex: 1; }
 
 .add-page-btn {
   background: linear-gradient(135deg, var(--deep-green), var(--deep-blue)) !important;
-  margin-top: 14px;
 }
 
 .book-empty {
@@ -746,9 +752,11 @@ textarea.short { min-height: 0; flex: 1; }
   </div>
 
   <div class="book-nav">
-    <button id="btn-prev" onclick="prevPage()" disabled>← Vorige</button>
-    <span class="book-counter" id="page-counter">laden...</span>
-    <button id="btn-next" onclick="nextPage()" disabled>Volgende →</button>
+    <div class="book-nav-pager">
+      <button id="btn-prev" onclick="prevPage()" disabled>← Vorige</button>
+      <span class="book-counter" id="page-counter">laden...</span>
+      <button id="btn-next" onclick="nextPage()" disabled>Volgende →</button>
+    </div>
     <button class="add-page-btn" onclick="showForm()">➕ Voeg jouw pagina toe</button>
   </div>
 

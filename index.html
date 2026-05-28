@@ -283,6 +283,28 @@ textarea.short { min-height: 0; flex: 1; }
   color: #fff;
 }
 
+.btn-pdf {
+  padding: 10px 22px;
+  border-radius: 50px;
+  border: 2.5px solid var(--deep-purple);
+  background: transparent;
+  color: var(--deep-purple);
+  font-family: 'Comic Sans MS', 'Comic Sans', cursive;
+  font-weight: 800;
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition: all 0.18s;
+}
+.btn-pdf:hover {
+  background: var(--deep-purple);
+  color: #fff;
+}
+.btn-pdf:disabled {
+  opacity: 0.55;
+  cursor: default;
+  transform: none;
+}
+
 /* ── DIVIDER between columns ── */
 .col-divider {
   position: absolute;
@@ -727,13 +749,12 @@ textarea.short { min-height: 0; flex: 1; }
     <button id="btn-prev" onclick="prevPage()" disabled>← Vorige</button>
     <span class="book-counter" id="page-counter">laden...</span>
     <button id="btn-next" onclick="nextPage()" disabled>Volgende →</button>
+    <button class="add-page-btn" onclick="showForm()">➕ Voeg jouw pagina toe</button>
   </div>
 
   <div id="book-pages"></div>
 
-  <button class="book-nav add-page-btn" onclick="showForm()" style="margin-top:16px;padding:12px 32px;font-size:1.05rem;">
-    ➕ Voeg jouw pagina toe
-  </button>
+  <button id="btn-pdf" class="btn-pdf" onclick="savePdf()" style="display:none;">📄 Sla op als PDF</button>
 </div>
 
 
@@ -1192,6 +1213,96 @@ function shrinkFilledAnswers(container) {
 // ══════════════════════════════════════════════
 loadBook();
 showBook();
+</script>
+
+<!-- PDF LIBRARIES -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+<script>
+// ══════════════════════════════════════════════
+// SAVE AS PDF
+// Each A4 landscape page (297×210 mm) is split
+// into two A5 portrait halves (148.5×210 mm).
+// The front cover is center-cropped to one A5.
+// ══════════════════════════════════════════════
+async function savePdf() {
+  const btn = document.getElementById('btn-pdf');
+  btn.disabled = true;
+  const origText = btn.innerHTML;
+  btn.innerHTML = '⏳ PDF wordt gemaakt...';
+
+  try {
+    const { jsPDF } = window.jspdf;
+    const A5W = 148.5, A5H = 210; // mm
+
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a5' });
+
+    const captureOpts = { scale: 3, useCORS: true, allowTaint: true, logging: false };
+
+    // ── Helper: crop a canvas horizontally and return a new canvas ──
+    function cropHalf(src, half) {
+      const halfW = Math.floor(src.width / 2);
+      const c = document.createElement('canvas');
+      c.width  = halfW;
+      c.height = src.height;
+      const x = half === 'left' ? 0 : halfW;
+      c.getContext('2d').drawImage(src, x, 0, halfW, src.height, 0, 0, halfW, src.height);
+      return c;
+    }
+
+    // ── 1. Front cover → center-crop to A5 portrait ──
+    // The cover is A4 landscape (297mm wide). The centre 148.5mm (50% of width)
+    // is taken so the main centered content fills the A5 portrait page.
+    const coverEl = document.querySelector('.front-cover');
+    const coverCanvas = await html2canvas(coverEl, captureOpts);
+    const coverHalfW = Math.floor(coverCanvas.width / 2);
+    const coverCropped = document.createElement('canvas');
+    coverCropped.width  = coverHalfW;
+    coverCropped.height = coverCanvas.height;
+    coverCropped.getContext('2d').drawImage(
+      coverCanvas,
+      Math.floor(coverCanvas.width / 4), 0, coverHalfW, coverCanvas.height,
+      0, 0, coverHalfW, coverCanvas.height
+    );
+    pdf.addImage(coverCropped.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, A5W, A5H);
+
+    // ── 2. Entry pages — render each off-screen, split left/right ──
+    const tempDiv = document.createElement('div');
+    tempDiv.style.cssText = 'position:fixed;top:0;left:-1400px;z-index:0;pointer-events:none;';
+    document.body.appendChild(tempDiv);
+
+    for (let i = 0; i < entries.length; i++) {
+      tempDiv.innerHTML = renderFilledPage(entries[i]);
+      const pageEl = tempDiv.querySelector('.filled-page');
+
+      // Wait one frame so styles apply
+      await new Promise(r => requestAnimationFrame(r));
+
+      const pageCanvas = await html2canvas(pageEl, captureOpts);
+
+      // Left half → A5 portrait page
+      pdf.addPage();
+      const leftC = cropHalf(pageCanvas, 'left');
+      pdf.addImage(leftC.toDataURL('image/jpeg', 0.90), 'JPEG', 0, 0, A5W, A5H);
+
+      // Right half → A5 portrait page
+      pdf.addPage();
+      const rightC = cropHalf(pageCanvas, 'right');
+      pdf.addImage(rightC.toDataURL('image/jpeg', 0.90), 'JPEG', 0, 0, A5W, A5H);
+    }
+
+    document.body.removeChild(tempDiv);
+    pdf.save('eline-vriendenboekje.pdf');
+
+  } catch (err) {
+    console.error('PDF generation failed:', err);
+    alert('Er ging iets mis bij het maken van de PDF. Probeer het opnieuw.');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = origText;
+  }
+}
 </script>
 </body>
 </html>

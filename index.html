@@ -3,717 +3,468 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>🎓 Eline's Vriendenboekje</title>
+<title>🌸 Eline's Vriendenboekje</title>
+
+<!-- Modern, cute typography: Fredoka (rounded display) + Nunito (rounded body) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+
 <style>
+/* ════════════════════════════════════════════════════════════
+   ELINE'S VRIENDENBOEKJE — Theme: "Playful & Bold" (Phase 1)
+   Modern 2026 redesign · see tracker.md for the design system.
+════════════════════════════════════════════════════════════ */
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
+  /* ── palette (kept from original, used more confidently) ── */
   --pink:        #F472B6;
   --deep-pink:   #DB2777;
   --green:       #86EFAC;
   --deep-green:  #16A34A;
   --yellow:      #FDE047;
+  --deep-yellow: #CA8A04;
   --orange:      #FB923C;
   --deep-orange: #EA580C;
   --blue:        #7DD3FC;
   --deep-blue:   #0284C7;
   --purple:      #C084FC;
   --deep-purple: #7C3AED;
-  --sand:        #D4A96A;
-  --cream:       rgba(255,255,255,0.82);
-  --dark:        #1E1040;
-}
 
-@media print {
-  body { background: white !important; }
-  .no-print { display: none !important; }
-  .page { box-shadow: none !important; margin: 0 !important; }
+  --ink:         #2A1A4A;
+  --ink-soft:    #7A6B9D;
+  --paper:       #ffffff;
+
+  --font-display: 'Fredoka', system-ui, -apple-system, sans-serif;
+  --font-body:    'Nunito', system-ui, -apple-system, sans-serif;
+
+  --grad-primary: linear-gradient(135deg, var(--deep-pink), var(--deep-purple));
+  --grad-hero:    linear-gradient(135deg, #FF9ED2 0%, #C084FC 46%, #8AD4FF 100%);
+
+  --shadow-sm: 0 2px 10px rgba(76,29,149,.10);
+  --shadow-md: 0 10px 28px rgba(76,29,149,.14);
+  --shadow-lg: 0 22px 60px rgba(76,29,149,.22);
+
+  --radius:    22px;
+  --radius-sm: 14px;
+
+  /* responsive A4 scale, set by fitStages() */
+  --fit: 1;
 }
 
 body {
-  font-family: 'Comic Sans MS', 'Comic Sans', cursive;
-  background: #f0e8f5;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  font-family: var(--font-body);
+  color: var(--ink);
   min-height: 100vh;
-  padding: 30px 16px 60px;
-  color: var(--dark);
+  background-color: #fbf2fb;
+  background-image:
+    radial-gradient(900px 620px at 10% -10%, rgba(244,114,182,.30), transparent 60%),
+    radial-gradient(820px 600px at 102% 2%,  rgba(125,211,252,.30), transparent 55%),
+    radial-gradient(960px 720px at 50% 116%, rgba(192,132,252,.32), transparent 60%);
+  background-attachment: fixed;
 }
 
-/* ── A4 LANDSCAPE PAGE ── */
-.page {
-  width: 297mm;
-  height: 210mm;
-  background: white;
-  box-shadow: 0 12px 60px rgba(0,0,0,0.18);
+/* ── floating soft blobs (screen only) ── */
+.bg-blobs { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+.blob {
+  position: absolute; border-radius: 50%;
+  filter: blur(46px); opacity: .45;
+  animation: float 20s ease-in-out infinite;
+}
+@keyframes float {
+  0%,100% { transform: translate(0,0) scale(1); }
+  50%     { transform: translate(0,-36px) scale(1.06); }
+}
+
+/* ════════ PRINT ════════ */
+@media print {
+  body { background: #fff !important; }
+  .bg-blobs, .no-print { display: none !important; }
+  .a4-stage { width: auto !important; height: auto !important; transform: none !important; margin: 0 !important; }
+  .a4-stage > .front-cover,
+  .a4-stage > .page,
+  .a4-stage > .filled-page { position: relative !important; transform: none !important; }
+  .filled-page, .front-cover, .page { box-shadow: none !important; border-radius: 0 !important; margin: 0 !important; }
+}
+
+/* ════════ VIEWS ════════ */
+#book-view {
+  display: flex; flex-direction: column; align-items: center;
+  min-height: 100vh; padding: 30px 16px 64px;
+}
+#form-view {
+  display: none; flex-direction: column; align-items: center;
+  padding: 22px 16px 64px;
+}
+
+/* ════════ RESPONSIVE A4 STAGE ════════
+   Each A4 page keeps its true 297×210mm size; the stage scales it to fit
+   narrow screens. PDF capture happens off-screen at natural size, so this
+   never affects the export. */
+.a4-stage {
   position: relative;
-  overflow: hidden;
-  margin-bottom: 20px;
+  width:  calc(297mm * var(--fit));
+  height: calc(210mm * var(--fit));
+  margin: 0 auto 18px;
+}
+/* Scoped to the page types so this always beats the shared `.page` rule
+   below (specificity), while pages rendered OUTSIDE a stage (the off-screen
+   PDF capture) keep their own `position: relative`. */
+.a4-stage > .front-cover,
+.a4-stage > .page,
+.a4-stage > .filled-page {
+  position: absolute; top: 0; left: 0;
+  transform-origin: top left;
+  transform: scale(var(--fit));
 }
 
-/* translucent overlay so content stays readable */
-.page-overlay {
-  position: absolute;
-  inset: 0;
-  background: rgba(255,255,255,0.60);
-  pointer-events: none;
-  z-index: 0;
+/* ════════ A4 PAGES (cover / form / filled) ════════ */
+.front-cover, .page, .filled-page {
+  width: 297mm; height: 210mm;
+  position: relative; overflow: hidden;
+  border-radius: 18px;
+  box-shadow: var(--shadow-lg);
+  background: var(--paper);
 }
 
-.page-inner {
-  position: relative;
-  z-index: 2;
-  padding: 13mm 10mm 12mm;  /* matches filled-inner */
-  display: flex;
-  flex-direction: column;
-  height: 210mm;
-}
-
-/* ── HEADER ── */
-.header {
-  text-align: center;
-  margin-bottom: 6mm;
-  background: rgba(255,255,255,0.60);
-  border-radius: 16px;
-  padding: 6mm 8mm 5mm;
-  border: 3px solid var(--pink);
-  box-shadow: 0 3px 16px rgba(219,39,119,0.15);
-}
-
-.header-emoji { font-size: 1.8rem; letter-spacing: 4px; margin-bottom: 3px; }
-
-.header h1 {
-  font-family: 'Comic Sans MS', 'Comic Sans', cursive;
-  font-size: 2.4rem;
-  color: var(--deep-pink);
-  line-height: 1.1;
-  text-shadow: 2px 2px 0 rgba(244,114,182,0.3);
-}
-
-.header-sub {
-  font-size: 0.88rem;
-  font-weight: 800;
-  color: var(--deep-green);
-  margin-top: 3px;
-}
-
-.header-intro {
-  font-size: 0.78rem;
-  font-weight: 600;
-  color: #555;
-  margin-top: 5px;
-  line-height: 1.5;
-}
-
-/* ── TWO COLUMN LAYOUT ── */
-.columns {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 4mm;
-  flex: 1;
-  align-items: stretch;
-}
-
-/* ── SECTION LABEL ── */
-.section-label {
-  display: inline-block;
-  font-family: 'Comic Sans MS', 'Comic Sans', cursive;
-  font-size: 0.9rem;
-  padding: 3px 12px;
-  border-radius: 20px;
-  color: white;
-  margin-bottom: 2px;
-  letter-spacing: 0.3px;
-}
-.sl-pink   { background: var(--deep-pink); }
-.sl-green  { background: var(--deep-green); }
-.sl-blue   { background: var(--deep-blue); }
-.sl-purple { background: var(--deep-purple); }
-.sl-orange { background: var(--deep-orange); }
-
-/* ── CARD — matches .filled-card layout ── */
-.card {
-  background: rgba(255,255,255,0.60);
-  border-radius: 12px;
-  padding: 6px 10px;
-  border-left: 4px solid var(--pink);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.07);
-  display: flex;
-  flex-direction: column;
-  justify-content: space-evenly;
-}
-.card.c-green  { border-left-color: var(--deep-green); }
-.card.c-blue   { border-left-color: var(--deep-blue); }
-.card.c-purple { border-left-color: var(--deep-purple); }
-.card.c-orange { border-left-color: var(--deep-orange); }
-.card.c-yellow { border-left-color: #ca8a04; }
-.card.c-pink   { border-left-color: var(--deep-pink); }
-
-.card label {
-  display: block;
-  font-weight: 900;
-  font-size: 0.82rem;
-  margin-bottom: 2px;
-  color: var(--dark);
-  line-height: 1.3;
-}
-
-.card .hint {
-  font-size: 0.58rem;
-  color: #999;
-  font-style: italic;
-  font-weight: 600;
-  margin-bottom: 3px;
-  line-height: 1.3;
-}
-
-/* ── INPUTS ── */
-input[type="text"],
-textarea {
-  width: 100%;
-  padding: 2px 6px;
-  border: 2px solid #e0d0ff;
-  border-radius: 8px;
-  font-family: 'Comic Sans MS', 'Comic Sans', cursive;
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: var(--dark);
-  background: rgba(255,255,255,0.0);
-  transition: border-color 0.2s, box-shadow 0.2s;
-  outline: none;
-  resize: none;
-  overflow: auto;         /* must be auto/scroll so scrollHeight > clientHeight works */
-  scrollbar-width: none; /* Firefox */
-}
-textarea::-webkit-scrollbar { display: none; } /* Chrome / Safari */
-input[type="text"]:focus,
-textarea:focus {
-  border-color: var(--pink);
-  box-shadow: 0 0 0 2px rgba(244,114,182,0.2);
-}
-/* base textarea — height now comes from flex layout; min-height as fallback */
-textarea { min-height: 28px; line-height: 1.4; }
-textarea.tall { min-height: 42px; }
-textarea.short { min-height: 0; flex: 1; }
-
-/* title row for Dr. field */
-.title-row {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-.title-row span {
-  font-size: 0.72rem;
-  font-weight: 900;
-  white-space: nowrap;
-  color: var(--deep-purple);
-}
-
-/* ── PHOTO UPLOAD ── */
-.upload-zone {
-  border: 2.5px dashed var(--purple);
-  border-radius: 10px;
-  padding: 12px 6px;
-  text-align: center;
-  cursor: pointer;
-  background: rgba(192,132,252,0.06);
-  transition: background 0.2s, border-color 0.2s;
-}
-.upload-zone:hover, .upload-zone.drag-over {
-  background: rgba(192,132,252,0.16);
-  border-color: var(--deep-purple);
-}
-.upload-zone input[type="file"] { display: none; }
-.upload-icon { font-size: 1.4rem; display: block; margin-bottom: 3px; }
-.upload-label { font-weight: 800; color: var(--deep-purple); font-size: 0.85rem; }
-.upload-sub { font-size: 0.6rem; color: #bbb; margin-top: 2px; }
-#photo-preview {
-  max-width: 70px;
-  max-height: 70px;
-  border-radius: 50%;
-  border: 3px solid var(--purple);
-  margin: 6px auto 0;
-  display: none;
-  object-fit: cover;
-}
-
-/* ── SUBMIT ── */
-.submit-area {
-  text-align: center;
-  margin-top: 6mm;
-  display: flex;
-  gap: 10px;
-  justify-content: center;
-  flex-wrap: wrap;
-}
-
-.btn-submit {
-  background: linear-gradient(135deg, var(--deep-pink), var(--deep-purple));
-  color: #fff;
-  font-family: 'Comic Sans MS', 'Comic Sans', cursive;
-  font-size: 1.1rem;
-  padding: 12px 36px;
-  border: none;
-  border-radius: 50px;
-  cursor: pointer;
-  box-shadow: 0 5px 20px rgba(219,39,119,0.35);
-  transition: transform 0.18s, box-shadow 0.18s;
-}
-.btn-submit:hover {
-  transform: translateY(-2px) scale(1.03);
-  box-shadow: 0 8px 28px rgba(219,39,119,0.45);
-}
-
-.btn-print {
-  padding: 10px 22px;
-  border-radius: 50px;
-  border: 2.5px solid var(--deep-green);
-  background: transparent;
-  color: var(--deep-green);
-  font-family: 'Comic Sans MS', 'Comic Sans', cursive;
-  font-weight: 800;
-  font-size: 0.88rem;
-  cursor: pointer;
-  transition: all 0.18s;
-}
-.btn-print:hover {
-  background: var(--deep-green);
-  color: #fff;
-}
-
-.btn-pdf {
-  padding: 10px 22px;
-  border-radius: 50px;
-  border: 2.5px solid var(--deep-purple);
-  background: transparent;
-  color: var(--deep-purple);
-  font-family: 'Comic Sans MS', 'Comic Sans', cursive;
-  font-weight: 800;
-  font-size: 0.88rem;
-  cursor: pointer;
-  transition: all 0.18s;
-}
-.btn-pdf:hover {
-  background: var(--deep-purple);
-  color: #fff;
-}
-.btn-pdf:disabled {
-  opacity: 0.55;
-  cursor: default;
-  transform: none;
-}
-
-/* ── DIVIDER between columns ── */
-.col-divider {
-  position: absolute;
-  left: 50%;
-  top: 8mm;
-  bottom: 8mm;
-  width: 1.5px;
-  background: linear-gradient(to bottom, transparent, rgba(219,39,119,0.25) 20%, rgba(219,39,119,0.25) 80%, transparent);
-  transform: translateX(-50%);
-  z-index: 2;
-  pointer-events: none;
-}
-
-/* ── SUCCESS OVERLAY ── */
-.overlay {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: rgba(255,255,255,0.97);
-  z-index: 200;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  padding: 40px;
-}
-.overlay.show { display: flex; }
-.overlay h2 {
-  font-family: 'Comic Sans MS', 'Comic Sans', cursive;
-  font-size: 2.4rem;
-  color: var(--deep-pink);
-  margin: 16px 0 10px;
-}
-.overlay p {
-  font-size: 1rem;
-  font-weight: 700;
-  color: #666;
-  max-width: 400px;
-  line-height: 1.6;
-}
-.bounce {
-  font-size: 3rem;
-  animation: bop 0.6s ease-in-out infinite alternate;
-}
-@keyframes bop {
-  from { transform: translateY(0); }
-  to   { transform: translateY(-14px); }
-}
-.btn-reset {
-  margin-top: 24px;
-  padding: 12px 32px;
-  border: none;
-  border-radius: 50px;
-  background: linear-gradient(135deg, var(--pink), var(--purple));
-  color: #fff;
-  font-family: 'Comic Sans MS', 'Comic Sans', cursive;
-  font-size: 1.05rem;
-  cursor: pointer;
-  box-shadow: 0 5px 20px rgba(244,114,182,0.35);
-}
-
-/* ── FLOATING DECO (outside page) ── */
-.deco {
-  position: fixed;
-  pointer-events: none;
-  z-index: 0;
-  font-size: 1.8rem;
-  opacity: 0.4;
-  animation: drift 7s ease-in-out infinite;
-}
-@keyframes drift {
-  0%,100% { transform: translateY(0) rotate(-5deg); }
-  50%      { transform: translateY(-14px) rotate(5deg); }
-}
-
-.bg-layer {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  overflow: hidden;
-}
-.bg-overlay {
-  position: absolute;
-  inset: 0;
-  background: rgba(255,255,255,0.55);
-  z-index: 0;
-  pointer-events: none;
-}
-.left-col, .right-col {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  height: 100%;
-}
-.left-col .card, .right-col .card { flex: 1; }
-.label-wrap {
-  flex: 0 0 auto !important;
-}
-.left-col .card, .right-col .card { flex: 1; }
-
-
-/* ── FRONT COVER ── */
+/* ════════════════════════════════════════
+   FRONT COVER
+════════════════════════════════════════ */
 .front-cover {
-  width: 297mm;
-  height: 210mm;
-  position: relative;
-  overflow: hidden;
-  box-shadow: 0 12px 60px rgba(0,0,0,0.22);
-  margin-bottom: 20px;
-  background: linear-gradient(135deg, #fce4f0 0%, #e8d5f5 40%, #d4eaff 100%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  background: var(--grad-hero);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
 }
-
-.cover-deco-ring {
-  position: absolute;
-  border-radius: 50%;
-  opacity: 0.18;
+.cover-dots {
+  position: absolute; inset: 0; z-index: 1; pointer-events: none; opacity: .45;
+  background-image: radial-gradient(circle, rgba(255,255,255,.65) 1.6px, transparent 1.7px);
+  background-size: 24px 24px;
 }
-
-.cover-stars {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  font-size: 1.4rem;
-  opacity: 0.55;
-}
+.cover-blob { position: absolute; border-radius: 50%; opacity: .22; z-index: 0; }
+.cover-corner { position: absolute; font-size: 2.1rem; opacity: .75; z-index: 2; }
 
 .cover-inner {
-  position: relative;
-  z-index: 2;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  width: 100%;
-  padding: 12mm 14mm;
-  text-align: center;
+  position: relative; z-index: 3;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  height: 100%; width: 100%; padding: 14mm 16mm; text-align: center;
 }
 
 .cover-badge {
-  background: linear-gradient(135deg, var(--deep-pink), var(--deep-purple));
-  color: white;
-  font-family: 'Comic Sans MS', cursive;
-  font-size: 0.82rem;
-  font-weight: 800;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  padding: 5px 18px;
-  border-radius: 50px;
-  margin-bottom: 10mm;
-  box-shadow: 0 4px 14px rgba(219,39,119,0.3);
+  font-family: var(--font-display); font-weight: 600;
+  font-size: .82rem; letter-spacing: 2px; text-transform: uppercase;
+  color: #fff; background: rgba(42,26,74,.78);
+  padding: 7px 20px; border-radius: 999px; margin-bottom: 9mm;
+  box-shadow: var(--shadow-sm);
 }
 
-.cover-emoji-row {
-  font-size: 2.6rem;
-  letter-spacing: 8px;
-  margin-bottom: 6mm;
-  filter: drop-shadow(0 2px 6px rgba(0,0,0,0.12));
+.cover-emoji-row { display: flex; gap: 16px; margin-bottom: 7mm; }
+.cover-emoji-row span {
+  width: 64px; height: 64px; display: grid; place-items: center;
+  font-size: 2rem; background: rgba(255,255,255,.78);
+  border-radius: 50%; box-shadow: var(--shadow-sm);
 }
+.cover-emoji-row span:nth-child(2) { transform: translateY(-8px); }
 
 .cover-title {
-  font-family: 'Comic Sans MS', cursive;
-  font-size: 4.2rem;
-  color: var(--deep-pink);
-  line-height: 1.05;
-  text-shadow: 3px 3px 0 rgba(244,114,182,0.25), -1px -1px 0 rgba(255,255,255,0.8);
-  margin-bottom: 4mm;
+  font-family: var(--font-display); font-weight: 700;
+  font-size: 4.2rem; line-height: 1.02; color: #fff;
+  text-shadow: 0 4px 0 rgba(124,58,237,.18), 0 10px 30px rgba(124,58,237,.25);
+  margin-bottom: 5mm;
 }
-
 .cover-subtitle {
-  font-family: 'Comic Sans MS', cursive;
-  font-size: 1.35rem;
-  color: var(--deep-purple);
-  font-weight: 800;
-  margin-bottom: 7mm;
-  letter-spacing: 0.5px;
+  font-family: var(--font-display); font-weight: 500;
+  font-size: 1.4rem; color: var(--ink); opacity: .85; margin-bottom: 7mm;
 }
-
 .cover-divider {
-  width: 60mm;
-  height: 3px;
-  background: linear-gradient(to right, transparent, var(--deep-pink), var(--deep-purple), transparent);
-  border-radius: 2px;
-  margin-bottom: 7mm;
+  width: 64mm; height: 4px; border-radius: 4px; margin-bottom: 7mm;
+  background: linear-gradient(to right, transparent, #fff, transparent);
+}
+.cover-credit {
+  font-family: var(--font-body); font-weight: 700; font-size: .92rem;
+  color: var(--ink); max-width: 170mm; line-height: 1.6;
+  background: rgba(255,255,255,.72); border-radius: 16px;
+  padding: 10px 24px; box-shadow: var(--shadow-sm);
 }
 
-.cover-tagline {
-  font-family: 'Comic Sans MS', cursive;
-  font-size: 0.92rem;
-  color: #666;
-  font-weight: 700;
-  max-width: 180mm;
-  line-height: 1.6;
-  margin-bottom: 8mm;
-}
-
-.cover-date-box {
-  background: rgba(255,255,255,0.72);
-  border: 2.5px solid var(--deep-pink);
-  border-radius: 14px;
-  padding: 5px 20px;
-  font-family: 'Comic Sans MS', cursive;
-  font-size: 0.88rem;
-  font-weight: 800;
-  color: var(--deep-pink);
-  box-shadow: 0 3px 12px rgba(219,39,119,0.12);
-}
-
-.cover-corner {
-  position: absolute;
-  font-size: 2.2rem;
-  opacity: 0.55;
-}
-
-/* ── BOOK VIEW ── */
-#book-view {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  min-height: 100vh;
-  padding: 30px 16px 60px;
-}
-
+/* ════════════════════════════════════════
+   BOOK NAV
+════════════════════════════════════════ */
 .book-nav {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
-  font-family: 'Comic Sans MS', cursive;
+  display: flex; flex-direction: column; align-items: center;
+  gap: 14px; margin: 4px 0 20px;
 }
-
-.book-nav-pager {
-  display: flex;
-  align-items: center;
-  gap: 20px;
+.nav-bar {
+  display: flex; align-items: center; gap: 16px;
+  background: rgba(255,255,255,.82); padding: 8px 14px;
+  border-radius: 999px; box-shadow: var(--shadow-md);
+  backdrop-filter: blur(8px);
 }
-
-.book-nav button {
-  background: linear-gradient(135deg, var(--deep-pink), var(--deep-purple));
-  color: white;
-  border: none;
-  border-radius: 50px;
-  padding: 10px 22px;
-  font-family: 'Comic Sans MS', cursive;
-  font-size: 1rem;
-  cursor: pointer;
-  box-shadow: 0 4px 14px rgba(219,39,119,0.3);
-  transition: transform 0.15s;
-}
-.book-nav button:hover { transform: scale(1.04); }
-.book-nav button:disabled { opacity: 0.35; cursor: default; transform: none; }
-
 .book-counter {
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: var(--deep-purple);
-  min-width: 100px;
-  text-align: center;
+  font-family: var(--font-display); font-weight: 600; font-size: 1rem;
+  color: var(--deep-purple); min-width: 92px; text-align: center;
 }
+.nav-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
 
-.add-page-btn {
-  background: linear-gradient(135deg, var(--deep-green), var(--deep-blue)) !important;
+/* ════════════════════════════════════════
+   BUTTONS
+════════════════════════════════════════ */
+.btn {
+  font-family: var(--font-display); font-weight: 600;
+  border: none; cursor: pointer; border-radius: 999px;
+  transition: transform .15s ease, box-shadow .15s ease, background .15s ease, border-color .15s ease;
 }
+.btn-primary {
+  background: var(--grad-primary); color: #fff;
+  padding: 11px 26px; font-size: 1rem;
+  box-shadow: 0 8px 20px rgba(219,39,119,.32);
+}
+.btn-primary:hover { transform: translateY(-2px) scale(1.02); box-shadow: 0 12px 28px rgba(219,39,119,.42); }
+.btn-cta {
+  background: var(--grad-primary); color: #fff;
+  padding: 13px 30px; font-size: 1.08rem;
+  box-shadow: 0 10px 24px rgba(219,39,119,.34);
+}
+.btn-cta:hover { transform: translateY(-3px) scale(1.03) rotate(-.6deg); box-shadow: 0 16px 32px rgba(219,39,119,.44); }
+.btn-ghost {
+  background: #fff; color: var(--deep-purple);
+  border: 2px solid #e7d9ff; padding: 9px 20px; font-size: .92rem;
+}
+.btn-ghost:hover { border-color: var(--deep-purple); background: #faf5ff; transform: translateY(-1px); }
+.btn-soft {
+  background: rgba(124,58,237,.12); color: var(--deep-purple);
+  padding: 11px 22px; font-size: .95rem;
+}
+.btn-soft:hover { background: rgba(124,58,237,.2); transform: translateY(-2px); }
+.btn-round {
+  width: 46px; height: 46px; border-radius: 50%;
+  background: var(--grad-primary); color: #fff; font-size: 1.25rem;
+  display: grid; place-items: center;
+  box-shadow: 0 6px 16px rgba(219,39,119,.3);
+}
+.btn-round:hover { transform: scale(1.1); }
+.btn:active { transform: translateY(0) scale(.98); }
+.btn:disabled { opacity: .38; cursor: default; transform: none !important; box-shadow: none; }
 
+/* ════════════════════════════════════════
+   EMPTY STATE
+════════════════════════════════════════ */
 .book-empty {
-  text-align: center;
-  font-family: 'Comic Sans MS', cursive;
-  color: var(--deep-purple);
-  font-size: 1.2rem;
-  margin-top: 60px;
-  line-height: 2;
+  background: rgba(255,255,255,.86); border-radius: 24px;
+  padding: 48px 42px; text-align: center; max-width: 540px;
+  font-family: var(--font-display); font-weight: 500;
+  color: var(--deep-purple); font-size: 1.2rem; line-height: 1.9;
+  box-shadow: var(--shadow-md); margin-top: 24px;
+}
+.book-empty .big { font-size: 3rem; display: block; margin-bottom: 8px; }
+
+/* ════════════════════════════════════════
+   SHARED PAGE INTERIOR (form + filled)
+════════════════════════════════════════ */
+.bg-layer { position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+.bg-overlay { position: absolute; inset: 0; z-index: 0; pointer-events: none; background: rgba(255,255,255,.74); }
+
+.col-divider {
+  position: absolute; left: 50%; top: 10mm; bottom: 10mm; width: 2px;
+  transform: translateX(-50%); z-index: 2; pointer-events: none;
+  background: linear-gradient(to bottom, transparent, rgba(124,58,237,.18) 18%, rgba(124,58,237,.18) 82%, transparent);
 }
 
-/* filled page (read-only book view) */
-.filled-page {
-  width: 297mm;
-  height: 210mm;
-  position: relative;
-  overflow: hidden;
-  box-shadow: 0 12px 60px rgba(0,0,0,0.18);
-  margin-bottom: 10px;
-  background: white;
-}
-.filled-page .bg-layer,
-.filled-page .bg-overlay,
-.filled-page .col-divider { pointer-events: none; }
-
-.filled-inner {
-  position: relative;
-  z-index: 2;
+.page-inner, .filled-inner {
+  position: relative; z-index: 2;
   padding: 13mm 10mm 12mm;
-  display: flex;
-  flex-direction: column;
-  height: 210mm;
+  display: flex; flex-direction: column; height: 210mm;
 }
 
-.filled-columns {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 4mm;
-  flex: 1;
-  align-items: stretch;
+.columns, .filled-columns {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 5mm;
+  flex: 1; align-items: stretch;
+}
+.left-col, .right-col, .filled-col {
+  display: flex; flex-direction: column; gap: 5px; height: 100%;
+}
+.left-col .card, .right-col .card, .filled-col .filled-card { flex: 1; }
+.label-wrap { flex: 0 0 auto !important; }
+
+/* ── section sticker labels ── */
+.section-label {
+  display: inline-block; font-family: var(--font-display); font-weight: 600;
+  font-size: .82rem; letter-spacing: .2px; color: #fff;
+  padding: 4px 14px; border-radius: 999px;
+  box-shadow: var(--shadow-sm); transform: rotate(-1.5deg);
+}
+.sl-pink   { background: linear-gradient(135deg, var(--deep-pink), var(--pink)); }
+.sl-orange { background: linear-gradient(135deg, var(--deep-orange), var(--orange)); }
+.sl-blue   { background: linear-gradient(135deg, var(--deep-blue), var(--blue)); }
+.sl-purple { background: linear-gradient(135deg, var(--deep-purple), var(--purple)); }
+.sl-green  { background: linear-gradient(135deg, var(--deep-green), var(--green)); }
+
+/* ── cards ── */
+.card, .filled-card {
+  background: rgba(255,255,255,.92);
+  border-radius: var(--radius-sm);
+  border: 1.5px solid rgba(124,58,237,.07);
+  border-left: 6px solid var(--pink);
+  box-shadow: var(--shadow-sm);
+  padding: 7px 12px;
+  display: flex; flex-direction: column; justify-content: space-evenly;
+}
+.card.c-green,  .filled-card.c-green  { border-left-color: var(--deep-green); }
+.card.c-blue,   .filled-card.c-blue   { border-left-color: var(--deep-blue); }
+.card.c-purple, .filled-card.c-purple { border-left-color: var(--deep-purple); }
+.card.c-orange, .filled-card.c-orange { border-left-color: var(--deep-orange); }
+.card.c-yellow, .filled-card.c-yellow { border-left-color: var(--deep-yellow); }
+.card.c-pink,   .filled-card.c-pink   { border-left-color: var(--deep-pink); }
+
+.card label {
+  display: block; font-family: var(--font-display); font-weight: 600;
+  font-size: .82rem; line-height: 1.25; color: var(--ink); margin-bottom: 3px;
+}
+.card .hint { font-size: .6rem; color: var(--ink-soft); font-style: italic; margin-bottom: 3px; }
+
+.field { display: flex; flex-direction: column; gap: 1px; }
+.field.grow { flex: 1; }
+
+/* ── inputs ── */
+input[type="text"], textarea {
+  width: 100%; font-family: var(--font-body); font-weight: 600;
+  font-size: .9rem; color: var(--ink);
+  background: #fff; border: 2px solid #ece3fb; border-radius: 11px;
+  padding: 5px 11px; outline: none;
+  transition: border-color .15s, box-shadow .15s;
+  resize: none; overflow: auto; scrollbar-width: none;
+}
+textarea::-webkit-scrollbar { display: none; }
+input[type="text"]:focus, textarea:focus {
+  border-color: var(--pink); box-shadow: 0 0 0 4px rgba(244,114,182,.18);
+}
+textarea { min-height: 28px; line-height: 1.4; }
+textarea.tall  { min-height: 42px; }
+textarea.short { min-height: 0; flex: 1; }
+
+/* ── PhD-type pill chips ── */
+.chip-row { display: flex; flex-wrap: wrap; gap: 6px 8px; margin-top: 5px; align-items: center; }
+.chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-family: var(--font-body); font-weight: 700; font-size: .82rem;
+  padding: 5px 13px; border-radius: 999px; cursor: pointer;
+  background: #fff; border: 2px solid #ece3fb; color: var(--ink);
+  transition: background .15s, border-color .15s, color .15s, transform .12s;
+}
+.chip:hover { transform: translateY(-1px); border-color: var(--purple); }
+.chip input { position: absolute; opacity: 0; width: 0; height: 0; }
+.chip:has(input:checked) {
+  background: var(--grad-primary); color: #fff; border-color: transparent;
+  box-shadow: 0 4px 12px rgba(219,39,119,.28);
+}
+.chip-other { display: inline-flex; align-items: center; gap: 5px; font-weight: 700; font-size: .82rem; }
+.chip-other input { width: 96px; padding: 3px 8px; }
+
+/* ── photo upload ── */
+.upload-zone {
+  border: 2.5px dashed var(--purple); border-radius: 16px;
+  padding: 14px 8px; text-align: center; cursor: pointer;
+  background: rgba(192,132,252,.06);
+  transition: background .18s, border-color .18s, transform .18s;
+}
+.upload-zone:hover, .upload-zone.drag-over {
+  background: rgba(192,132,252,.16); border-color: var(--deep-purple); transform: translateY(-1px);
+}
+.upload-zone input[type="file"] { display: none; }
+.upload-icon  { font-size: 1.5rem; display: block; margin-bottom: 4px; }
+.upload-label { font-family: var(--font-display); font-weight: 600; color: var(--deep-purple); font-size: .88rem; }
+.upload-sub   { font-size: .62rem; color: var(--ink-soft); margin-top: 2px; }
+#photo-preview {
+  max-width: 76px; max-height: 76px; border-radius: 50%;
+  border: 3px solid var(--purple); margin: 7px auto 0;
+  display: none; object-fit: cover;
 }
 
-.filled-col {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  height: 100%;
-}
-
-.filled-card {
-  background: rgba(255,255,255,0.60);
-  border-radius: 12px;
-  padding: 6px 10px;
-  border-left: 4px solid var(--deep-pink);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.07);
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-evenly;
-}
-.filled-card.c-orange { border-left-color: var(--deep-orange); }
-.filled-card.c-blue   { border-left-color: var(--deep-blue); }
-.filled-card.c-pink   { border-left-color: var(--deep-pink); }
-.filled-card.c-purple { border-left-color: var(--deep-purple); }
-
+/* ════════════════════════════════════════
+   FILLED (read-only) PAGE
+════════════════════════════════════════ */
 .filled-card .q {
-  font-size: 1.0rem;
-  font-weight: 900;
-  color: #888;
-  line-height: 1.2;
-  margin-bottom: 1px;
-  font-family: 'Comic Sans MS', cursive;
+  font-family: var(--font-display); font-weight: 600; font-size: .92rem;
+  color: var(--ink-soft); line-height: 1.2; margin-bottom: 1px;
 }
 .filled-card .a {
-  font-size: 1.0rem;
-  font-weight: 400;
-  color: var(--dark);
-  line-height: 1.35;
-  font-family: 'Comic Sans MS', cursive;
-  white-space: pre-wrap;
-  word-break: break-word;
+  font-family: var(--font-body); font-weight: 600; font-size: 1rem;
+  color: var(--ink); line-height: 1.35; white-space: pre-wrap; word-break: break-word;
 }
-
 .filled-photo {
-  max-width: 100%;
-  max-height: 84mm; /* 2/5 of 210mm page height */
-  width: auto;
-  height: auto;
-  display: block;
-  margin: 0 auto;
+  max-width: 100%; max-height: 84mm; width: auto; height: auto;
+  display: block; margin: 0 auto; border-radius: 12px;
 }
 
-/* ── FORM VIEW ── */
-#form-view {
-  display: none;
-  flex-direction: column;
-  align-items: center;
-  padding: 20px 16px 60px;
-}
-
+/* ════════════════════════════════════════
+   FORM TOPBAR
+════════════════════════════════════════ */
 .form-topbar {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 14px;
-  font-family: 'Comic Sans MS', cursive;
+  display: flex; gap: 12px; align-items: center;
+  margin-bottom: 16px; flex-wrap: wrap; justify-content: center;
 }
-.btn-cancel {
-  padding: 9px 20px;
-  border-radius: 50px;
-  border: 2.5px solid #aaa;
-  background: white;
-  color: #666;
-  font-family: 'Comic Sans MS', cursive;
-  font-size: 0.9rem;
-  cursor: pointer;
-}
-.btn-save {
-  padding: 9px 28px;
-  border-radius: 50px;
-  border: none;
-  background: linear-gradient(135deg, var(--deep-pink), var(--deep-purple));
-  color: white;
-  font-family: 'Comic Sans MS', cursive;
-  font-size: 0.9rem;
-  cursor: pointer;
-  box-shadow: 0 4px 14px rgba(219,39,119,0.3);
-}
-.btn-save:disabled { opacity: 0.5; cursor: default; }
-
-/* ── SAVING SPINNER ── */
 .saving-msg {
-  font-family: 'Comic Sans MS', cursive;
-  color: var(--deep-purple);
-  font-size: 0.9rem;
+  font-family: var(--font-display); color: var(--deep-purple);
+  font-weight: 500; font-size: .95rem;
   animation: pulse 1s ease-in-out infinite alternate;
 }
-@keyframes pulse { from{opacity:1} to{opacity:0.4} }
+@keyframes pulse { from { opacity: 1; } to { opacity: .4; } }
 
+/* ════════════════════════════════════════
+   SUCCESS OVERLAY + CONFETTI
+════════════════════════════════════════ */
+.overlay {
+  display: none; position: fixed; inset: 0; z-index: 200;
+  background: rgba(42,26,74,.42); backdrop-filter: blur(6px);
+  align-items: center; justify-content: center; padding: 24px; overflow: hidden;
+}
+.overlay.show { display: flex; }
+.success-card {
+  position: relative; z-index: 2;
+  background: #fff; border-radius: 30px; padding: 40px 42px;
+  text-align: center; max-width: 460px; box-shadow: var(--shadow-lg);
+}
+.success-card h2 {
+  font-family: var(--font-display); font-weight: 700; font-size: 2.3rem;
+  color: var(--deep-pink); margin: 14px 0 10px;
+}
+.success-card p {
+  font-family: var(--font-body); font-weight: 700; font-size: 1rem;
+  color: var(--ink-soft); max-width: 380px; line-height: 1.6; margin: 0 auto;
+}
+.success-emojis { margin-top: 16px; font-size: 1.8rem; }
+.bounce { font-size: 3rem; display: inline-block; animation: bop .6s ease-in-out infinite alternate; }
+@keyframes bop { from { transform: translateY(0); } to { transform: translateY(-14px); } }
+
+.confetti {
+  position: absolute; top: -12vh; width: 10px; height: 14px;
+  border-radius: 2px; opacity: .9; z-index: 1;
+  animation: confetti-fall linear infinite;
+}
+@keyframes confetti-fall {
+  0%   { transform: translateY(0) rotate(0deg); }
+  100% { transform: translateY(125vh) rotate(720deg); }
+}
+
+/* ════════════════════════════════════════
+   ACCESSIBILITY
+════════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
 </style>
 </head>
 <body>
+
+<!-- floating decorative blobs (screen only) -->
+<div class="bg-blobs" aria-hidden="true">
+  <span class="blob" style="width:280px;height:280px;background:var(--pink);  top:6%;  left:4%;  animation-delay:0s;"></span>
+  <span class="blob" style="width:230px;height:230px;background:var(--blue);  top:54%; left:84%; animation-delay:-6s;"></span>
+  <span class="blob" style="width:200px;height:200px;background:var(--purple);top:78%; left:10%; animation-delay:-3s;"></span>
+  <span class="blob" style="width:160px;height:160px;background:var(--yellow);top:12%; left:78%; animation-delay:-9s;"></span>
+</div>
+
 
 <!-- ════════════════════════════════════════════════
      BOOK VIEW
@@ -721,48 +472,44 @@ textarea.short { min-height: 0; flex: 1; }
 <div id="book-view">
 
   <!-- ══ FRONT COVER ══ -->
-  <div class="front-cover">
-    <!-- Decorative rings -->
-    <div class="cover-deco-ring" style="width:320px;height:320px;background:var(--pink);top:-80px;left:-80px;"></div>
-    <div class="cover-deco-ring" style="width:240px;height:240px;background:var(--purple);bottom:-60px;right:-60px;"></div>
-    <div class="cover-deco-ring" style="width:160px;height:160px;background:var(--blue);bottom:20px;left:30px;"></div>
-    <div class="cover-deco-ring" style="width:100px;height:100px;background:var(--yellow);top:20px;right:80px;"></div>
-    <!-- Corner decorations -->
-    <span class="cover-corner" style="top:14mm;left:14mm;">🌸</span>
-    <span class="cover-corner" style="top:14mm;right:14mm;">🎓</span>
-    <span class="cover-corner" style="bottom:14mm;left:14mm;">🚲</span>
-    <span class="cover-corner" style="bottom:14mm;right:14mm;">✨</span>
-    <!-- Small scattered stars -->
-    <div class="cover-stars">
-      <span style="position:absolute;top:18%;left:12%;">⭐</span>
-      <span style="position:absolute;top:70%;left:18%;">💫</span>
-      <span style="position:absolute;top:25%;right:14%;">🌟</span>
-      <span style="position:absolute;top:75%;right:10%;">⭐</span>
-      <span style="position:absolute;top:45%;left:7%;">💜</span>
-      <span style="position:absolute;top:50%;right:7%;">💗</span>
-    </div>
-    <div class="cover-inner">
-      <div class="cover-badge">🎉 PhD Verdediging · 2025 🎉</div>
-      <div class="cover-emoji-row">🌸🎓🚲</div>
-      <div class="cover-title">Eline's<br>Vriendenboekje</div>
-      <div class="cover-subtitle">Een boekje vol liefde, herinneringen &amp; wijsheid</div>
-      <div class="cover-divider"></div>
-      <div class="cover-date-box">Samengesteld ter ere van haar promotie door vrienden, familie en (ex-)collega's.</div>
+  <div class="a4-stage">
+    <div class="front-cover">
+      <!-- soft blobs -->
+      <span class="cover-blob" style="width:340px;height:340px;background:var(--pink);  top:-90px;  left:-80px;"></span>
+      <span class="cover-blob" style="width:260px;height:260px;background:var(--purple);bottom:-70px; right:-60px;"></span>
+      <span class="cover-blob" style="width:180px;height:180px;background:var(--blue);  bottom:24px; left:36px;"></span>
+      <span class="cover-blob" style="width:120px;height:120px;background:var(--yellow);top:26px;   right:90px;"></span>
+      <div class="cover-dots"></div>
+      <!-- corner stickers -->
+      <span class="cover-corner" style="top:14mm;left:15mm;">🌸</span>
+      <span class="cover-corner" style="top:14mm;right:15mm;">🎓</span>
+      <span class="cover-corner" style="bottom:14mm;left:15mm;">🚲</span>
+      <span class="cover-corner" style="bottom:14mm;right:15mm;">✨</span>
+
+      <div class="cover-inner">
+        <div class="cover-badge">🎉 PhD Verdediging · 2025</div>
+        <div class="cover-emoji-row"><span>🌸</span><span>🎓</span><span>🚲</span></div>
+        <div class="cover-title">Eline's<br>Vriendenboekje</div>
+        <div class="cover-subtitle">Een boekje vol liefde, herinneringen &amp; wijsheid</div>
+        <div class="cover-divider"></div>
+        <div class="cover-credit">Samengesteld ter ere van haar promotie door vrienden, familie en (ex-)collega's.</div>
+      </div>
     </div>
   </div>
 
-  <div class="book-nav">
-    <div class="book-nav-pager">
-      <button id="btn-prev" onclick="prevPage()" disabled>← Vorige</button>
+  <div class="book-nav no-print">
+    <div class="nav-bar">
+      <button id="btn-prev" class="btn btn-round" onclick="prevPage()" disabled aria-label="Vorige pagina">←</button>
       <span class="book-counter" id="page-counter">laden...</span>
-      <button id="btn-next" onclick="nextPage()" disabled>Volgende →</button>
+      <button id="btn-next" class="btn btn-round" onclick="nextPage()" disabled aria-label="Volgende pagina">→</button>
     </div>
-    <button class="add-page-btn" onclick="showForm()">➕ Voeg jouw pagina toe</button>
+    <div class="nav-actions">
+      <button class="btn btn-cta" onclick="showForm()">✏️ Voeg jouw pagina toe</button>
+      <button id="btn-pdf" class="btn btn-soft" onclick="savePdf()" style="display:none;">📄 Sla op als PDF</button>
+    </div>
   </div>
 
   <div id="book-pages"></div>
-
-  <button id="btn-pdf" class="btn-pdf" onclick="savePdf()" style="display:none;">📄 Sla op als PDF</button>
 </div>
 
 
@@ -770,160 +517,133 @@ textarea.short { min-height: 0; flex: 1; }
      FORM VIEW
 ════════════════════════════════════════════════ -->
 <div id="form-view">
-  <div class="form-topbar">
-    <button class="btn-cancel" onclick="showBook()">← Terug naar het boekje</button>
-    <button class="btn-save" id="btn-save" onclick="savePage()">💾 Opslaan &amp; toevoegen</button>
+  <div class="form-topbar no-print">
+    <button class="btn btn-ghost" onclick="showBook()">← Terug naar het boekje</button>
+    <button class="btn btn-primary" id="btn-save" onclick="savePage()">💾 Opslaan &amp; toevoegen</button>
     <span class="saving-msg" id="saving-msg" style="display:none;">Opslaan...</span>
   </div>
 
   <!-- THE A4 FORM PAGE -->
-  <div class="page">
+  <div class="a4-stage">
+    <div class="page">
       <!-- BACKGROUND LAYER -->
-  <div class="bg-layer">
-    <img src="assets/background.jpg"
-         style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" alt="achtergrond"/>
-  </div>
-  <div class="bg-overlay"></div>
-    <div class="col-divider"></div>
-    <div class="page-inner">
-      
-    <!-- FORM -->
-    <form id="booklet">
-    <div class="columns">
+      <div class="bg-layer">
+        <img src="assets/background.jpg"
+             style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" alt="achtergrond"/>
+      </div>
+      <div class="bg-overlay"></div>
+      <div class="col-divider"></div>
 
-      <!-- ════════ LEFT COLUMN ════════ -->
-      <div class="left-col">
+      <div class="page-inner">
+        <!-- FORM -->
+        <form id="booklet">
+        <div class="columns">
 
-        <!-- FOTO -->
-        <div class="label-wrap"><div class="section-label sl-pink">Jouw Foto</div></div>
-        <div class="card c-purple">
-          <label>Upload een foto van jezelf (of eentje met Eline samen!) 🤳</label>
-          <div class="upload-zone" id="zone">
-            <input type="file" id="photo-input" name="photo" accept="image/*">
-            <span class="upload-icon" id="upload-icon">📷</span>
-            <div class="upload-label" id="upload-label">Klik of sleep een foto hierheen</div>
-            <div class="upload-sub">JPG, PNG, GIF — max. 10 MB</div>
-            <img id="photo-preview" src="" alt="Jouw foto">
-          </div>
-        </div>
+          <!-- ════════ LEFT COLUMN ════════ -->
+          <div class="left-col">
 
-        <!-- OVER JOU -->
-        <div class="label-wrap"><div class="section-label sl-orange" style="margin-top:5px;">Over Jou</div></div>
-
-        <div class="card c-orange" style="flex:1;gap:6px;">
-          <div style="display:flex;flex-direction:column;">
-            <label for="fn">Naam ✨</label>
-            <input type="text" id="fn" name="name">
-          </div>
-          <div style="display:flex;flex-direction:column;">
-            <label for="how">Waar ken ik Eline van 🤝</label>
-            <input type="text" id="how" name="how">
-          </div>
-          <div style="display:flex;flex-direction:column;flex:1;">
-            <label for="hobbies">Mijn hobby's / passies 🌟</label>
-            <textarea id="hobbies" name="hobbies" class="short"></textarea>
-          </div>
-          <div style="display:flex;flex-direction:column;">
-            <label for="food">Mijn lievelingseten 🍅</label>
-            <input type="text" id="food" name="food">
-          </div>
-          <div style="display:flex;flex-direction:column;">
-            <label for="future-self">Als ik later groot ben, wil ik worden 🚀</label>
-            <input type="text" id="future-self" name="future-self">
-          </div>
-        </div>
-
-      </div><!-- /left -->
-
-      <!-- ════════ RIGHT COLUMN ════════ -->
-      <div class="right-col">
-
-        <!-- OVER ELINE -->
-        <div class="label-wrap"><div class="section-label sl-pink">Over Eline</div></div>
-
-        <div class="card c-pink" style="gap:6px;flex:5;">
-          <div style="display:flex;flex-direction:column;flex:1;">
-            <label for="memory">Mijn meest iconische herinnering aan Eline 💭</label>
-            <textarea id="memory" name="memory" class="short"></textarea>
-          </div>
-          <div style="display:flex;flex-direction:column;">
-            <label for="words">Omschrijf Eline in 3 woorden 🎨</label>
-            <input type="text" id="words" name="words">
-          </div>
-          <div style="display:flex;flex-direction:column;flex:1;">
-            <label for="unique">Wat maakt Eline uniek volgens mij ✨</label>
-            <textarea id="unique" name="unique" class="short"></textarea>
-          </div>
-          <div style="display:flex;flex-direction:column;flex:1;">
-            <label for="learned">Dit heb ik van Eline geleerd (bewust of onbewust) 🌱</label>
-            <textarea id="learned" name="learned" class="short"></textarea>
-          </div>
-          <div style="display:flex;flex-direction:column;">
-            <label for="song">Dit liedje doet mij denken aan Eline 🎶</label>
-            <input type="text" id="song" name="song">
-          </div>
-        </div>
-
-        <!-- TOEKOMST & PHD -->
-        <div class="label-wrap"><div class="section-label sl-blue" style="margin-top:5px;">Toekomst &amp; PhD-twist</div></div>
-
-        <div class="card c-blue" style="gap:6px;flex:3;">
-          <div style="display:flex;flex-direction:column;flex:1;">
-            <label for="future">Wat zie ik Eline over 5 jaar doen 🔭</label>
-            <textarea id="future" name="future" class="short"></textarea>
-          </div>
-          <div>
-            <label>Eline na haar PhD is vooral: 🎓</label>
-            <div style="display:flex;flex-wrap:wrap;gap:5px 10px;margin-top:4px;">
-              <label style="font-weight:700;display:flex;align-items:center;gap:3px;cursor:pointer;">
-                <input type="checkbox" name="phd-type" value="wereldverbeteraar"> 🌍 wereldverbeteraar
-              </label>
-              <label style="font-weight:700;display:flex;align-items:center;gap:3px;cursor:pointer;">
-                <input type="checkbox" name="phd-type" value="onderzoeker"> 🔬 onderzoeker
-              </label>
-              <label style="font-weight:700;display:flex;align-items:center;gap:3px;cursor:pointer;">
-                <input type="checkbox" name="phd-type" value="avonturier"> 🧭 avonturier
-              </label>
-              <label style="font-weight:700;display:flex;align-items:center;gap:3px;cursor:pointer;">
-                <input type="checkbox" name="phd-type" value="levensgenieter"> 🌸 levensgenieter
-              </label>
-              <span style="font-weight:700;display:flex;align-items:center;gap:4px;">
-                anders: <input type="text" name="phd-other" style="min-height:unset;padding:2px 6px;width:90px;">
-              </span>
+            <!-- FOTO -->
+            <div class="label-wrap"><div class="section-label sl-pink">Jouw Foto</div></div>
+            <div class="card c-purple">
+              <label>Upload een foto van jezelf (of eentje met Eline samen!) 🤳</label>
+              <div class="upload-zone" id="zone">
+                <input type="file" id="photo-input" name="photo" accept="image/*">
+                <span class="upload-icon" id="upload-icon">📷</span>
+                <div class="upload-label" id="upload-label">Klik of sleep een foto hierheen</div>
+                <div class="upload-sub">JPG, PNG, GIF — max. 10 MB</div>
+                <img id="photo-preview" src="" alt="Jouw foto">
+              </div>
             </div>
-          </div>
-          <div style="display:flex;flex-direction:column;">
-            <label for="research-theme">Als Eline een onderzoeksthema was, zou ze heten 🏷️</label>
-            <input type="text" id="research-theme" name="research-theme" placeholder="Bijv. 'De Fietsdynamiek van Geluk'...">
-          </div>
-          <div style="display:flex;flex-direction:column;flex:1;">
-            <label for="tip-muziek">mijn tip voor muziek, een boek of een fietsroute voor Eline is:</label>
-            <textarea id="tip-muziek" name="tip-muziek" class="short"></textarea>
-          </div>
-        </div>
 
-      </div><!-- /right -->
+            <!-- OVER JOU -->
+            <div class="label-wrap"><div class="section-label sl-orange" style="margin-top:5px;">Over Jou</div></div>
+            <div class="card c-orange" style="flex:1;gap:6px;">
+              <div class="field"><label for="fn">Naam ✨</label>
+                <input type="text" id="fn" name="name"></div>
+              <div class="field"><label for="how">Waar ken ik Eline van 🤝</label>
+                <input type="text" id="how" name="how"></div>
+              <div class="field grow"><label for="hobbies">Mijn hobby's / passies 🌟</label>
+                <textarea id="hobbies" name="hobbies" class="short"></textarea></div>
+              <div class="field"><label for="food">Mijn lievelingseten 🍅</label>
+                <input type="text" id="food" name="food"></div>
+              <div class="field"><label for="future-self">Als ik later groot ben, wil ik worden 🚀</label>
+                <input type="text" id="future-self" name="future-self"></div>
+            </div>
 
-    </div><!-- /columns -->
-    </form>
-  
-    </div><!-- /page-inner -->
-  </div><!-- /page -->
+          </div><!-- /left -->
+
+          <!-- ════════ RIGHT COLUMN ════════ -->
+          <div class="right-col">
+
+            <!-- OVER ELINE -->
+            <div class="label-wrap"><div class="section-label sl-pink">Over Eline</div></div>
+            <div class="card c-pink" style="gap:6px;flex:5;">
+              <div class="field grow"><label for="memory">Mijn meest iconische herinnering aan Eline 💭</label>
+                <textarea id="memory" name="memory" class="short"></textarea></div>
+              <div class="field"><label for="words">Omschrijf Eline in 3 woorden 🎨</label>
+                <input type="text" id="words" name="words"></div>
+              <div class="field grow"><label for="unique">Wat maakt Eline uniek volgens mij ✨</label>
+                <textarea id="unique" name="unique" class="short"></textarea></div>
+              <div class="field grow"><label for="learned">Dit heb ik van Eline geleerd (bewust of onbewust) 🌱</label>
+                <textarea id="learned" name="learned" class="short"></textarea></div>
+              <div class="field"><label for="song">Dit liedje doet mij denken aan Eline 🎶</label>
+                <input type="text" id="song" name="song"></div>
+            </div>
+
+            <!-- TOEKOMST & PHD -->
+            <div class="label-wrap"><div class="section-label sl-blue" style="margin-top:5px;">Toekomst &amp; PhD-twist</div></div>
+            <div class="card c-blue" style="gap:6px;flex:3;">
+              <div class="field grow"><label for="future">Wat zie ik Eline over 5 jaar doen 🔭</label>
+                <textarea id="future" name="future" class="short"></textarea></div>
+              <div>
+                <label>Eline na haar PhD is vooral: 🎓</label>
+                <div class="chip-row">
+                  <label class="chip"><input type="checkbox" name="phd-type" value="wereldverbeteraar"> 🌍 wereldverbeteraar</label>
+                  <label class="chip"><input type="checkbox" name="phd-type" value="onderzoeker"> 🔬 onderzoeker</label>
+                  <label class="chip"><input type="checkbox" name="phd-type" value="avonturier"> 🧭 avonturier</label>
+                  <label class="chip"><input type="checkbox" name="phd-type" value="levensgenieter"> 🌸 levensgenieter</label>
+                  <span class="chip-other">anders: <input type="text" name="phd-other"></span>
+                </div>
+              </div>
+              <div class="field"><label for="research-theme">Als Eline een onderzoeksthema was, zou ze heten 🏷️</label>
+                <input type="text" id="research-theme" name="research-theme" placeholder="Bijv. 'De Fietsdynamiek van Geluk'..."></div>
+              <div class="field grow"><label for="tip-muziek">Mijn tip voor muziek, een boek of een fietsroute voor Eline is:</label>
+                <textarea id="tip-muziek" name="tip-muziek" class="short"></textarea></div>
+            </div>
+
+          </div><!-- /right -->
+
+        </div><!-- /columns -->
+        </form>
+      </div><!-- /page-inner -->
+    </div><!-- /page -->
+  </div><!-- /a4-stage -->
 </div>
 
 
 <!-- SUCCESS OVERLAY -->
 <div class="overlay" id="success">
-  <span class="bounce">🎊</span>
-  <h2>Opgeslagen!</h2>
-  <p>Jouw pagina is toegevoegd aan Eline's vriendenboekje! Ze gaat dit bewaren voor altijd 😄</p>
-  <div style="margin-top:16px;font-size:2rem;">🚲 👑 🎓 ✨ 🐑 🍅</div>
-  <button class="btn-reset" onclick="afterSave()">📖 Bekijk het boekje</button>
+  <!-- confetti -->
+  <span class="confetti" style="left:8%; background:var(--pink);  animation-duration:2.6s; animation-delay:0s;"></span>
+  <span class="confetti" style="left:20%;background:var(--yellow);animation-duration:3.1s; animation-delay:.4s;"></span>
+  <span class="confetti" style="left:33%;background:var(--blue);  animation-duration:2.4s; animation-delay:.8s;"></span>
+  <span class="confetti" style="left:46%;background:var(--purple);animation-duration:3.4s; animation-delay:.2s;"></span>
+  <span class="confetti" style="left:58%;background:var(--green); animation-duration:2.8s; animation-delay:1s;"></span>
+  <span class="confetti" style="left:70%;background:var(--orange);animation-duration:3.0s; animation-delay:.6s;"></span>
+  <span class="confetti" style="left:82%;background:var(--pink);  animation-duration:2.5s; animation-delay:1.2s;"></span>
+  <span class="confetti" style="left:92%;background:var(--purple);animation-duration:3.2s; animation-delay:.3s;"></span>
+  <div class="success-card">
+    <span class="bounce">🎊</span>
+    <h2>Opgeslagen!</h2>
+    <p>Jouw pagina is toegevoegd aan Eline's vriendenboekje! Ze gaat dit bewaren voor altijd 😄</p>
+    <div class="success-emojis">🚲 👑 🎓 ✨ 🐑 🍅</div>
+    <button class="btn btn-cta" style="margin-top:24px;" onclick="afterSave()">📖 Bekijk het boekje</button>
+  </div>
 </div>
 
 <script>
 // ══════════════════════════════════════════════
-// SUPABASE CONFIG — fill in after creating account
+// SUPABASE CONFIG
 // ══════════════════════════════════════════════
 const SUPABASE_URL  = 'https://ubksiavwqqrfblwruybb.supabase.co';
 const SUPABASE_KEY  = 'sb_publishable_ljvTzWA6H-kzrfaDk6aQuw_WeCadmH4';
@@ -972,15 +692,30 @@ async function uploadPhoto(file) {
 }
 
 // ══════════════════════════════════════════════
+// RESPONSIVE A4 SCALING
+// Keeps every A4 page at its true mm size but scales it to fit the
+// viewport. PDF export renders off-screen at natural size, untouched.
+// ══════════════════════════════════════════════
+function fitStages() {
+  const PAGE_PX = 297 * 96 / 25.4;          // 297mm in CSS px @96dpi ≈ 1122.5
+  const avail   = document.documentElement.clientWidth - 32;
+  const fit     = Math.max(0.2, Math.min(1, avail / PAGE_PX));
+  document.documentElement.style.setProperty('--fit', fit.toFixed(4));
+}
+window.addEventListener('resize', fitStages);
+
+// ══════════════════════════════════════════════
 // VIEW SWITCHING
 // ══════════════════════════════════════════════
 function showBook() {
   document.getElementById('form-view').style.display = 'none';
-  document.getElementById('book-view').style.display  = 'flex';
+  document.getElementById('book-view').style.display = 'flex';
+  fitStages();
 }
 function showForm() {
-  document.getElementById('book-view').style.display  = 'none';
-  document.getElementById('form-view').style.display  = 'flex';
+  document.getElementById('book-view').style.display = 'none';
+  document.getElementById('form-view').style.display = 'flex';
+  fitStages();
 }
 
 // ══════════════════════════════════════════════
@@ -1000,14 +735,17 @@ function renderBook() {
   const counter   = document.getElementById('page-counter');
   const btnPrev   = document.getElementById('btn-prev');
   const btnNext   = document.getElementById('btn-next');
+  const btnPdf    = document.getElementById('btn-pdf');
 
   if (!entries.length) {
     container.innerHTML = `<div class="book-empty">
-      📖 Het boekje is nog leeg!<br>
+      <span class="big">📖</span>
+      Het boekje is nog leeg!<br>
       Wees de eerste die een pagina toevoegt 🎉
     </div>`;
     counter.textContent = "0 pagina's";
     btnPrev.disabled = btnNext.disabled = true;
+    btnPdf.style.display = 'none';
     return;
   }
 
@@ -1018,11 +756,12 @@ function renderBook() {
   counter.textContent = `${currentPage + 1} / ${entries.length}`;
   btnPrev.disabled = currentPage === 0;
   btnNext.disabled = currentPage === entries.length - 1;
+  btnPdf.style.display = '';
 
-  container.innerHTML = renderFilledPage(e);
+  container.innerHTML = `<div class="a4-stage">${renderFilledPage(e)}</div>`;
 
-  // After the DOM is painted, shrink any overflowing answer text
-  requestAnimationFrame(() => shrinkFilledAnswers(container));
+  // After the DOM is painted, fit to viewport then shrink overflowing text
+  requestAnimationFrame(() => { fitStages(); shrinkFilledAnswers(container); });
 }
 
 function prevPage() { currentPage--; renderBook(); }
@@ -1030,8 +769,8 @@ function nextPage() { currentPage++; renderBook(); }
 
 function val(v) { return v || '—'; }
 function renderFilledPage(e) {
-  const bgLayer = document.querySelector('.bg-layer') 
-    ? document.querySelector('.bg-layer').outerHTML 
+  const bgLayer = document.querySelector('.bg-layer')
+    ? document.querySelector('.bg-layer').outerHTML
     : '';
 
   return `
@@ -1183,20 +922,15 @@ async function afterSave() {
 const MIN_FONT_PX = 6.5;
 
 function autoShrinkTextarea(el) {
-  // Reset to the stylesheet font size first
   el.style.fontSize = '';
   const basePx = parseFloat(window.getComputedStyle(el).fontSize);
   let size = basePx;
-  // Iteratively shrink until content fits inside the fixed box
   while (el.scrollHeight > el.clientHeight + 2 && size > MIN_FONT_PX) {
     size = Math.max(MIN_FONT_PX, size - 0.5);
     el.style.fontSize = size + 'px';
   }
 }
 
-// Apply to all form textareas on every keystroke.
-// Left-column textareas use their own independent fixed height (flex:1 within
-// their own column) so they are never affected by changes in the right column.
 document.querySelectorAll('#booklet textarea').forEach(ta => {
   ta.addEventListener('input', () => autoShrinkTextarea(ta));
 });
@@ -1207,7 +941,6 @@ function shrinkFilledAnswers(container) {
     el.style.fontSize = '';
     const basePx = parseFloat(window.getComputedStyle(el).fontSize);
     let size = basePx;
-    // Shrink until the element no longer overflows its parent card
     const card = el.closest('.filled-card');
     while (card && el.scrollHeight > card.clientHeight + 4 && size > MIN_FONT_PX) {
       size = Math.max(MIN_FONT_PX, size - 0.5);
@@ -1219,6 +952,7 @@ function shrinkFilledAnswers(container) {
 // ══════════════════════════════════════════════
 // INIT
 // ══════════════════════════════════════════════
+fitStages();
 loadBook();
 showBook();
 </script>
@@ -1230,9 +964,10 @@ showBook();
 <script>
 // ══════════════════════════════════════════════
 // SAVE AS PDF
-// Each A4 landscape page (297×210 mm) is split
-// into two A5 portrait halves (148.5×210 mm).
-// The front cover is center-cropped to one A5.
+// Each A4 landscape page (297×210 mm) is split into two A5 portrait
+// halves (148.5×210 mm). The front cover is center-cropped to one A5.
+// Everything is captured off-screen at natural size, so the responsive
+// on-screen scaling never affects the export.
 // ══════════════════════════════════════════════
 async function savePdf() {
   const btn = document.getElementById('btn-pdf');
@@ -1241,12 +976,19 @@ async function savePdf() {
   btn.innerHTML = '⏳ PDF wordt gemaakt...';
 
   try {
+    // Make sure the web fonts are ready before rasterising
+    if (document.fonts && document.fonts.ready) await document.fonts.ready;
+
     const { jsPDF } = window.jspdf;
     const A5W = 148.5, A5H = 210; // mm
 
     const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a5' });
+    const captureOpts = { scale: 3, useCORS: true, allowTaint: true, backgroundColor: '#ffffff', logging: false };
 
-    const captureOpts = { scale: 3, useCORS: true, allowTaint: true, logging: false };
+    // Off-screen staging area (no transforms → natural size capture)
+    const tempDiv = document.createElement('div');
+    tempDiv.style.cssText = 'position:fixed;top:0;left:-2000px;z-index:0;pointer-events:none;';
+    document.body.appendChild(tempDiv);
 
     // ── Helper: crop a canvas horizontally and return a new canvas ──
     function cropHalf(src, half) {
@@ -1259,11 +1001,12 @@ async function savePdf() {
       return c;
     }
 
-    // ── 1. Front cover → center-crop to A5 portrait ──
-    // The cover is A4 landscape (297mm wide). The centre 148.5mm (50% of width)
-    // is taken so the main centered content fills the A5 portrait page.
-    const coverEl = document.querySelector('.front-cover');
-    const coverCanvas = await html2canvas(coverEl, captureOpts);
+    // ── 1. Front cover → clone off-screen, center-crop to A5 portrait ──
+    const coverClone = document.querySelector('.front-cover').cloneNode(true);
+    tempDiv.appendChild(coverClone);
+    await new Promise(r => requestAnimationFrame(r));
+
+    const coverCanvas = await html2canvas(coverClone, captureOpts);
     const coverHalfW = Math.floor(coverCanvas.width / 2);
     const coverCropped = document.createElement('canvas');
     coverCropped.width  = coverHalfW;
@@ -1274,30 +1017,22 @@ async function savePdf() {
       0, 0, coverHalfW, coverCanvas.height
     );
     pdf.addImage(coverCropped.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, A5W, A5H);
+    tempDiv.innerHTML = '';
 
     // ── 2. Entry pages — render each off-screen, split left/right ──
-    const tempDiv = document.createElement('div');
-    tempDiv.style.cssText = 'position:fixed;top:0;left:-1400px;z-index:0;pointer-events:none;';
-    document.body.appendChild(tempDiv);
-
     for (let i = 0; i < entries.length; i++) {
       tempDiv.innerHTML = renderFilledPage(entries[i]);
       const pageEl = tempDiv.querySelector('.filled-page');
 
-      // Wait one frame so styles apply
       await new Promise(r => requestAnimationFrame(r));
+      shrinkFilledAnswers(tempDiv);
 
       const pageCanvas = await html2canvas(pageEl, captureOpts);
 
-      // Left half → A5 portrait page
       pdf.addPage();
-      const leftC = cropHalf(pageCanvas, 'left');
-      pdf.addImage(leftC.toDataURL('image/jpeg', 0.90), 'JPEG', 0, 0, A5W, A5H);
-
-      // Right half → A5 portrait page
+      pdf.addImage(cropHalf(pageCanvas, 'left').toDataURL('image/jpeg', 0.90),  'JPEG', 0, 0, A5W, A5H);
       pdf.addPage();
-      const rightC = cropHalf(pageCanvas, 'right');
-      pdf.addImage(rightC.toDataURL('image/jpeg', 0.90), 'JPEG', 0, 0, A5W, A5H);
+      pdf.addImage(cropHalf(pageCanvas, 'right').toDataURL('image/jpeg', 0.90), 'JPEG', 0, 0, A5W, A5H);
     }
 
     document.body.removeChild(tempDiv);

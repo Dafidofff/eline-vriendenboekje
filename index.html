@@ -445,7 +445,7 @@ textarea.short { min-height: 0; flex: 1; }
   justify-content: center;
   height: 100%;
   width: 100%;
-  padding: 12mm 14mm;
+  padding: 10mm 14mm;
   text-align: center;
 }
 
@@ -459,32 +459,32 @@ textarea.short { min-height: 0; flex: 1; }
   text-transform: uppercase;
   padding: 5px 18px;
   border-radius: 50px;
-  margin-bottom: 10mm;
+  margin-bottom: 5mm;
   box-shadow: 0 4px 14px rgba(219,39,119,0.3);
 }
 
 .cover-emoji-row {
-  font-size: 2.6rem;
+  font-size: 1.9rem;
   letter-spacing: 8px;
-  margin-bottom: 6mm;
+  margin-bottom: 3mm;
   filter: drop-shadow(0 2px 6px rgba(0,0,0,0.12));
 }
 
 .cover-title {
   font-family: 'Comic Sans MS', cursive;
-  font-size: 4.2rem;
+  font-size: 3rem;
   color: var(--deep-pink);
   line-height: 1.05;
   text-shadow: 3px 3px 0 rgba(244,114,182,0.25), -1px -1px 0 rgba(255,255,255,0.8);
-  margin-bottom: 4mm;
+  margin-bottom: 3mm;
 }
 
 .cover-subtitle {
   font-family: 'Comic Sans MS', cursive;
-  font-size: 1.35rem;
+  font-size: 1.05rem;
   color: var(--deep-purple);
   font-weight: 800;
-  margin-bottom: 7mm;
+  margin-bottom: 4mm;
   letter-spacing: 0.5px;
 }
 
@@ -493,8 +493,30 @@ textarea.short { min-height: 0; flex: 1; }
   height: 3px;
   background: linear-gradient(to right, transparent, var(--deep-pink), var(--deep-purple), transparent);
   border-radius: 2px;
-  margin-bottom: 7mm;
+  margin-bottom: 4mm;
 }
+
+/* ── COVER PHOTO GALLERY ── */
+.cover-gallery {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 7px;
+  width: 100%;
+  max-width: 230mm;
+  margin: 2mm auto 5mm;
+}
+.cover-photo {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border-radius: 14px;
+  border: 3px solid #fff;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.15);
+  background: #f0e8f5;
+  display: block;
+}
+.cover-photo:nth-child(odd)  { transform: rotate(-1.5deg); }
+.cover-photo:nth-child(even) { transform: rotate(1.5deg); }
 
 .cover-tagline {
   font-family: 'Comic Sans MS', cursive;
@@ -647,7 +669,7 @@ textarea.short { min-height: 0; flex: 1; }
   font-family: 'Comic Sans MS', cursive;
 }
 .filled-card .a {
-  font-size: 1.0rem;
+  font-size: 0.85rem;
   font-weight: 400;
   color: var(--dark);
   line-height: 1.35;
@@ -742,11 +764,25 @@ textarea.short { min-height: 0; flex: 1; }
       <span style="position:absolute;top:50%;right:7%;">💗</span>
     </div>
     <div class="cover-inner">
-      <div class="cover-badge">🎉 PhD Verdediging · 2025 🎉</div>
+      <div class="cover-badge">🎉 PhD Verdediging · 2026 🎉</div>
       <div class="cover-emoji-row">🌸🎓🚲</div>
       <div class="cover-title">Eline's<br>Vriendenboekje</div>
       <div class="cover-subtitle">Een boekje vol liefde, herinneringen &amp; wijsheid</div>
       <div class="cover-divider"></div>
+      <div class="cover-gallery">
+        <img class="cover-photo" src="assets/photos/1.jpg"  alt="Eline" onerror="this.style.display='none'">
+        <img class="cover-photo" src="assets/photos/2.jpg"  alt="Eline" onerror="this.style.display='none'">
+        <img class="cover-photo" src="assets/photos/3.jpg"  alt="Eline" onerror="this.style.display='none'">
+        <img class="cover-photo" src="assets/photos/4.jpg"  alt="Eline" onerror="this.style.display='none'">
+        <img class="cover-photo" src="assets/photos/5.jpg"  alt="Eline" onerror="this.style.display='none'">
+        <img class="cover-photo" src="assets/photos/6.jpg"  alt="Eline" onerror="this.style.display='none'">
+        <img class="cover-photo" src="assets/photos/7.jpg"  alt="Eline" onerror="this.style.display='none'">
+        <img class="cover-photo" src="assets/photos/8.jpg"  alt="Eline" onerror="this.style.display='none'">
+        <img class="cover-photo" src="assets/photos/9.jpg"  alt="Eline" onerror="this.style.display='none'">
+        <img class="cover-photo" src="assets/photos/10.jpg" alt="Eline" onerror="this.style.display='none'">
+        <img class="cover-photo" src="assets/photos/11.jpg" alt="Eline" onerror="this.style.display='none'">
+        <img class="cover-photo" src="assets/photos/12.jpg" alt="Eline" onerror="this.style.display='none'">
+      </div>
       <div class="cover-date-box">Samengesteld ter ere van haar promotie door vrienden, familie en (ex-)collega's.</div>
     </div>
   </div>
@@ -952,6 +988,11 @@ async function dbInsert(row) {
     },
     body: JSON.stringify(row)
   });
+  if (!r.ok) {
+    // Surface the failure instead of silently "succeeding"
+    const detail = await r.text().catch(() => '');
+    throw new Error(`Opslaan mislukt (HTTP ${r.status}). ${detail}`);
+  }
   return r.json();
 }
 
@@ -1128,40 +1169,46 @@ async function savePage() {
   btn.disabled = true;
   msg.style.display = 'inline';
 
-  // Collect checkboxes
-  const checked = [...document.querySelectorAll('input[name="phd-type"]:checked')].map(cb => cb.value);
-  const phdOther = document.querySelector('input[name="phd-other"]').value.trim();
-  if (phdOther) checked.push(phdOther);
+  try {
+    // Collect checkboxes
+    const checked = [...document.querySelectorAll('input[name="phd-type"]:checked')].map(cb => cb.value);
+    const phdOther = document.querySelector('input[name="phd-other"]').value.trim();
+    if (phdOther) checked.push(phdOther);
 
-  // Upload photo
-  let photoUrl = null;
-  if (photoFile) {
-    photoUrl = await uploadPhoto(photoFile);
+    // Upload photo
+    let photoUrl = null;
+    if (photoFile) {
+      photoUrl = await uploadPhoto(photoFile);
+    }
+
+    const row = {
+      naam:             document.getElementById('fn').value.trim(),
+      waar_ken_ik_eline: document.getElementById('how').value.trim(),
+      hobbies:          document.getElementById('hobbies').value.trim(),
+      lievelingseten:   document.getElementById('food').value.trim(),
+      later_groot:      document.getElementById('future-self').value.trim(),
+      herinnering:      document.getElementById('memory').value.trim(),
+      drie_woorden:     document.getElementById('words').value.trim(),
+      uniek:            document.getElementById('unique').value.trim(),
+      geleerd:          document.getElementById('learned').value.trim(),
+      liedje:           document.getElementById('song').value.trim(),
+      vijf_jaar:        document.getElementById('future').value.trim(),
+      phd_type:         checked,
+      onderzoeksthema:  document.getElementById('research-theme').value.trim(),
+      tip_muziek:       document.getElementById('tip-muziek').value.trim(),
+      photo_url:        photoUrl
+    };
+
+    // Only celebrate if the row was actually written to the database
+    await dbInsert(row);
+    document.getElementById('success').classList.add('show');
+  } catch (err) {
+    console.error('Save failed:', err);
+    alert('Oeps! Het opslaan is niet gelukt 😢\n\n' + err.message + '\n\nProbeer het opnieuw.');
+  } finally {
+    btn.disabled = false;
+    msg.style.display = 'none';
   }
-
-  const row = {
-    naam:             document.getElementById('fn').value.trim(),
-    waar_ken_ik_eline: document.getElementById('how').value.trim(),
-    hobbies:          document.getElementById('hobbies').value.trim(),
-    lievelingseten:   document.getElementById('food').value.trim(),
-    later_groot:      document.getElementById('future-self').value.trim(),
-    herinnering:      document.getElementById('memory').value.trim(),
-    drie_woorden:     document.getElementById('words').value.trim(),
-    uniek:            document.getElementById('unique').value.trim(),
-    geleerd:          document.getElementById('learned').value.trim(),
-    liedje:           document.getElementById('song').value.trim(),
-    vijf_jaar:        document.getElementById('future').value.trim(),
-    phd_type:         checked,
-    onderzoeksthema:  document.getElementById('research-theme').value.trim(),
-    tip_muziek:       document.getElementById('tip-muziek').value.trim(),
-    photo_url:        photoUrl
-  };
-
-  await dbInsert(row);
-
-  btn.disabled = false;
-  msg.style.display = 'none';
-  document.getElementById('success').classList.add('show');
 }
 
 async function afterSave() {

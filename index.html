@@ -1022,7 +1022,10 @@ async function dbInsert(row) {
 }
 
 async function dbUpdate(id, row) {
-  const r = await fetch(`${SUPABASE_URL}/rest/v1/entries?id=eq.${id}`, {
+  if (id === undefined || id === null || id === '') {
+    throw new Error('Geen geldig id voor deze pagina — bijwerken niet mogelijk.');
+  }
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/entries?id=eq.${encodeURIComponent(id)}`, {
     method: 'PATCH',
     headers: {
       'apikey': SUPABASE_KEY,
@@ -1036,7 +1039,16 @@ async function dbUpdate(id, row) {
     const detail = await r.text().catch(() => '');
     throw new Error(`Bijwerken mislukt (HTTP ${r.status}). ${detail}`);
   }
-  return r.json();
+  // A PATCH that matches no rows still returns 200 with an empty array.
+  // Treat that as a failure so it can't look-successful-but-do-nothing.
+  const updated = await r.json().catch(() => []);
+  if (!Array.isArray(updated) || updated.length === 0) {
+    throw new Error(
+      'Er werd geen pagina bijgewerkt. Waarschijnlijk ontbreekt een UPDATE-' +
+      'rechten/policy (RLS) in Supabase voor de tabel "entries".'
+    );
+  }
+  return updated;
 }
 
 async function uploadPhoto(file) {

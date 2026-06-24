@@ -687,6 +687,31 @@ textarea.short { min-height: 0; flex: 1; }
   margin: 0 auto;
 }
 
+/* ── HIDDEN EDIT BUTTON (book view) ── */
+.edit-page-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 5;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255,255,255,0.6);
+  color: var(--deep-purple);
+  font-size: 0.95rem;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.15;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+  transition: opacity 0.2s, transform 0.15s, background 0.2s;
+}
+.edit-page-btn:hover {
+  opacity: 1;
+  transform: scale(1.1);
+  background: #fff;
+}
+
 /* ── FORM VIEW ── */
 #form-view {
   display: none;
@@ -996,6 +1021,24 @@ async function dbInsert(row) {
   return r.json();
 }
 
+async function dbUpdate(id, row) {
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/entries?id=eq.${id}`, {
+    method: 'PATCH',
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=representation'
+    },
+    body: JSON.stringify(row)
+  });
+  if (!r.ok) {
+    const detail = await r.text().catch(() => '');
+    throw new Error(`Bijwerken mislukt (HTTP ${r.status}). ${detail}`);
+  }
+  return r.json();
+}
+
 async function uploadPhoto(file) {
   const ext  = file.name.split('.').pop();
   const path = `${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
@@ -1015,13 +1058,87 @@ async function uploadPhoto(file) {
 // ══════════════════════════════════════════════
 // VIEW SWITCHING
 // ══════════════════════════════════════════════
+// id of the entry currently being edited (null = adding a new page)
+let editingId = null;
+// photo already stored for the entry being edited (kept if no new upload)
+let existingPhotoUrl = null;
+
 function showBook() {
   document.getElementById('form-view').style.display = 'none';
   document.getElementById('book-view').style.display  = 'flex';
 }
-function showForm() {
+
+// Switch to the form view (display only — does not touch field values)
+function gotoFormView() {
   document.getElementById('book-view').style.display  = 'none';
   document.getElementById('form-view').style.display  = 'flex';
+}
+
+// Open the form for a brand-new page
+function showForm() {
+  editingId = null;
+  resetForm();
+  document.getElementById('btn-save').innerHTML = '💾 Opslaan &amp; toevoegen';
+  gotoFormView();
+}
+
+// Open the form pre-filled with an existing entry, ready to edit
+function editPage(index) {
+  const e = entries[index];
+  if (!e) return;
+  editingId = e.id;
+
+  document.getElementById('fn').value           = e.naam || '';
+  document.getElementById('how').value          = e.waar_ken_ik_eline || '';
+  document.getElementById('hobbies').value      = e.hobbies || '';
+  document.getElementById('food').value         = e.lievelingseten || '';
+  document.getElementById('future-self').value  = e.later_groot || '';
+  document.getElementById('memory').value       = e.herinnering || '';
+  document.getElementById('words').value        = e.drie_woorden || '';
+  document.getElementById('unique').value       = e.uniek || '';
+  document.getElementById('learned').value      = e.geleerd || '';
+  document.getElementById('song').value         = e.liedje || '';
+  document.getElementById('future').value       = e.vijf_jaar || '';
+  document.getElementById('research-theme').value = e.onderzoeksthema || '';
+  document.getElementById('tip-muziek').value   = e.tip_muziek || '';
+
+  // PhD-type checkboxes + free-text "anders"
+  const known = ['wereldverbeteraar', 'onderzoeker', 'avonturier', 'levensgenieter'];
+  const types = e.phd_type || [];
+  document.querySelectorAll('input[name="phd-type"]').forEach(cb => {
+    cb.checked = types.includes(cb.value);
+  });
+  document.querySelector('input[name="phd-other"]').value = types.find(v => !known.includes(v)) || '';
+
+  // Photo: show the existing one as preview, keep it unless a new file is chosen
+  photoFile = null;
+  existingPhotoUrl = e.photo_url || null;
+  if (existingPhotoUrl) {
+    preview.src = existingPhotoUrl;
+    preview.style.display = 'block';
+    uploadIcon.textContent = '✅';
+    uploadLabel.textContent = 'Huidige foto — klik om te wijzigen';
+  } else {
+    preview.style.display = 'none';
+    uploadIcon.textContent = '📷';
+    uploadLabel.textContent = 'Klik of sleep een foto hierheen';
+  }
+
+  // Re-fit any overflowing textarea text to its box
+  document.querySelectorAll('#booklet textarea').forEach(autoShrinkTextarea);
+
+  document.getElementById('btn-save').innerHTML = '💾 Wijzigingen opslaan';
+  gotoFormView();
+}
+
+// Clear the form back to an empty new-entry state
+function resetForm() {
+  document.getElementById('booklet').reset();
+  photoFile = null;
+  existingPhotoUrl = null;
+  preview.style.display = 'none';
+  uploadIcon.textContent = '📷';
+  uploadLabel.textContent = 'Klik of sleep een foto hierheen';
 }
 
 // ══════════════════════════════════════════════
@@ -1061,6 +1178,19 @@ function renderBook() {
   btnNext.disabled = currentPage === entries.length - 1;
 
   container.innerHTML = renderFilledPage(e);
+
+  // Small, subtly-hidden edit button — reopens the form pre-filled
+  const page = container.querySelector('.filled-page');
+  if (page) {
+    const editBtn = document.createElement('button');
+    editBtn.className = 'edit-page-btn no-print';
+    editBtn.type = 'button';
+    editBtn.innerHTML = '✏️';
+    editBtn.title = 'Bewerk deze pagina';
+    editBtn.setAttribute('aria-label', 'Bewerk deze pagina');
+    editBtn.onclick = () => editPage(currentPage);
+    page.appendChild(editBtn);
+  }
 
   // After the DOM is painted, shrink any overflowing answer text
   requestAnimationFrame(() => shrinkFilledAnswers(container));
@@ -1175,8 +1305,8 @@ async function savePage() {
     const phdOther = document.querySelector('input[name="phd-other"]').value.trim();
     if (phdOther) checked.push(phdOther);
 
-    // Upload photo
-    let photoUrl = null;
+    // Upload photo (when editing, keep the existing one unless a new file is chosen)
+    let photoUrl = editingId ? existingPhotoUrl : null;
     if (photoFile) {
       photoUrl = await uploadPhoto(photoFile);
     }
@@ -1200,7 +1330,17 @@ async function savePage() {
     };
 
     // Only celebrate if the row was actually written to the database
-    await dbInsert(row);
+    if (editingId) {
+      await dbUpdate(editingId, row);
+      document.querySelector('#success h2').textContent = 'Bijgewerkt!';
+      document.querySelector('#success p').textContent =
+        'Jouw pagina is aangepast in Eline\'s vriendenboekje 😄';
+    } else {
+      await dbInsert(row);
+      document.querySelector('#success h2').textContent = 'Opgeslagen!';
+      document.querySelector('#success p').textContent =
+        'Jouw pagina is toegevoegd aan Eline\'s vriendenboekje! Ze gaat dit bewaren voor altijd 😄';
+    }
     document.getElementById('success').classList.add('show');
   } catch (err) {
     console.error('Save failed:', err);
@@ -1212,15 +1352,18 @@ async function savePage() {
 }
 
 async function afterSave() {
+  const wasEditing = editingId;
   document.getElementById('success').classList.remove('show');
-  document.getElementById('booklet').reset();
-  photoFile = null;
-  preview.style.display = 'none';
-  uploadIcon.textContent = '📷';
-  uploadLabel.textContent = 'Klik of sleep een foto hierheen';
+  editingId = null;
+  resetForm();
   await loadBook();
   showBook();
-  currentPage = entries.length - 1;
+  if (wasEditing) {
+    const idx = entries.findIndex(e => e.id === wasEditing);
+    currentPage = idx >= 0 ? idx : entries.length - 1;
+  } else {
+    currentPage = entries.length - 1;
+  }
   renderBook();
 }
 

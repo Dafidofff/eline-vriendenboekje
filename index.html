@@ -1158,6 +1158,7 @@ function renderBook() {
   const counter   = document.getElementById('page-counter');
   const btnPrev   = document.getElementById('btn-prev');
   const btnNext   = document.getElementById('btn-next');
+  const btnPdf    = document.getElementById('btn-pdf');
 
   if (!entries.length) {
     container.innerHTML = `<div class="book-empty">
@@ -1166,6 +1167,7 @@ function renderBook() {
     </div>`;
     counter.textContent = "0 pagina's";
     btnPrev.disabled = btnNext.disabled = true;
+    if (btnPdf) btnPdf.style.display = 'none';
     return;
   }
 
@@ -1176,6 +1178,7 @@ function renderBook() {
   counter.textContent = `${currentPage + 1} / ${entries.length}`;
   btnPrev.disabled = currentPage === 0;
   btnNext.disabled = currentPage === entries.length - 1;
+  if (btnPdf) btnPdf.style.display = '';   // booklet has pages → allow PDF export
 
   container.innerHTML = renderFilledPage(e);
 
@@ -1426,77 +1429,126 @@ showBook();
 // ══════════════════════════════════════════════
 async function savePdf() {
   const btn = document.getElementById('btn-pdf');
+  if (btn.disabled) return;
   btn.disabled = true;
   const origText = btn.innerHTML;
-  btn.innerHTML = '⏳ PDF wordt gemaakt...';
+  const setStatus = t => { btn.innerHTML = t; };
+  setStatus('⏳ PDF wordt gemaakt...');
 
+  // Crop a canvas to its left or right half
+  function cropHalf(src, half) {
+    const halfW = Math.floor(src.width / 2);
+    const c = document.createElement('canvas');
+    c.width = halfW; c.height = src.height;
+    const x = half === 'left' ? 0 : halfW;
+    c.getContext('2d').drawImage(src, x, 0, halfW, src.height, 0, 0, halfW, src.height);
+    return c;
+  }
+
+  // Wait until every <img> inside `el` has finished loading (or errored)
+  function waitForImages(el) {
+    return Promise.all([...el.querySelectorAll('img')].map(img =>
+      (img.complete && img.naturalWidth > 0)
+        ? Promise.resolve()
+        : new Promise(res => {
+            img.addEventListener('load',  res, { once: true });
+            img.addEventListener('error', res, { once: true });
+          })
+    ));
+  }
+
+  // Fetch a remote image and turn it into a same-origin data: URL.
+  // This is the key reliability fix: html2canvas then never touches a
+  // cross-origin image, so the canvas can't be tainted and toDataURL
+  // (and thus the whole PDF) can't fail on photos.
+  const photoCache = new Map();
+  async function toDataUrl(url) {
+    if (!url) return null;
+    if (photoCache.has(url)) return photoCache.get(url);
+    try {
+      const resp = await fetch(url, { mode: 'cors', cache: 'force-cache' });
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      const blob = await resp.blob();
+      const data = await new Promise((res, rej) => {
+        const fr = new FileReader();
+        fr.onload = () => res(fr.result);
+        fr.onerror = rej;
+        fr.readAsDataURL(blob);
+      });
+      photoCache.set(url, data);
+      return data;
+    } catch (e) {
+      console.warn('Photo could not be embedded:', url, e);
+      photoCache.set(url, null);
+      return null;
+    }
+  }
+
+  const yieldToUI = () => new Promise(r => setTimeout(r, 0));
+
+  let tempDiv;
   try {
+    if (document.fonts && document.fonts.ready) await document.fonts.ready;
+
     const { jsPDF } = window.jspdf;
     const A5W = 148.5, A5H = 210; // mm
-
     const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a5' });
 
-    const captureOpts = { scale: 3, useCORS: true, allowTaint: true, logging: false };
+    // scale 2 keeps A5 crisp while halving memory vs scale 3 (matters at ~50 entries);
+    // allowTaint:false means only clean images are drawn, so export never silently breaks.
+    const captureOpts = { scale: 2, useCORS: true, allowTaint: false, backgroundColor: '#ffffff', imageTimeout: 20000, logging: false };
 
-    // ── Helper: crop a canvas horizontally and return a new canvas ──
-    function cropHalf(src, half) {
-      const halfW = Math.floor(src.width / 2);
-      const c = document.createElement('canvas');
-      c.width  = halfW;
-      c.height = src.height;
-      const x = half === 'left' ? 0 : halfW;
-      c.getContext('2d').drawImage(src, x, 0, halfW, src.height, 0, 0, halfW, src.height);
-      return c;
-    }
-
-    // ── 1. Front cover → center-crop to A5 portrait ──
-    // The cover is A4 landscape (297mm wide). The centre 148.5mm (50% of width)
-    // is taken so the main centered content fills the A5 portrait page.
-    const coverEl = document.querySelector('.front-cover');
-    const coverCanvas = await html2canvas(coverEl, captureOpts);
-    const coverHalfW = Math.floor(coverCanvas.width / 2);
-    const coverCropped = document.createElement('canvas');
-    coverCropped.width  = coverHalfW;
-    coverCropped.height = coverCanvas.height;
-    coverCropped.getContext('2d').drawImage(
-      coverCanvas,
-      Math.floor(coverCanvas.width / 4), 0, coverHalfW, coverCanvas.height,
-      0, 0, coverHalfW, coverCanvas.height
-    );
-    pdf.addImage(coverCropped.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, A5W, A5H);
-
-    // ── 2. Entry pages — render each off-screen, split left/right ──
-    const tempDiv = document.createElement('div');
-    tempDiv.style.cssText = 'position:fixed;top:0;left:-1400px;z-index:0;pointer-events:none;';
+    // Off-screen staging area
+    tempDiv = document.createElement('div');
+    tempDiv.style.cssText = 'position:fixed;top:0;left:-3000px;z-index:0;pointer-events:none;';
     document.body.appendChild(tempDiv);
 
+    // ── 1. Front cover → center-crop A4 landscape to A5 portrait ──
+    const coverCanvas = await html2canvas(document.querySelector('.front-cover'), captureOpts);
+    const cHalf = Math.floor(coverCanvas.width / 2);
+    const cCrop = document.createElement('canvas');
+    cCrop.width = cHalf; cCrop.height = coverCanvas.height;
+    cCrop.getContext('2d').drawImage(
+      coverCanvas, Math.floor(coverCanvas.width / 4), 0, cHalf, coverCanvas.height,
+      0, 0, cHalf, coverCanvas.height
+    );
+    pdf.addImage(cCrop.toDataURL('image/jpeg', 0.9), 'JPEG', 0, 0, A5W, A5H);
+
+    // ── 2. Entry pages — render off-screen, fit text, split left/right ──
     for (let i = 0; i < entries.length; i++) {
-      tempDiv.innerHTML = renderFilledPage(entries[i]);
+      setStatus(`⏳ Pagina ${i + 1}/${entries.length}...`);
+
+      // Pre-embed this entry's photo as a data URL so the capture is taint-proof
+      const e = { ...entries[i] };
+      if (e.photo_url) e.photo_url = (await toDataUrl(e.photo_url)) || '';
+
+      tempDiv.innerHTML = renderFilledPage(e);
       const pageEl = tempDiv.querySelector('.filled-page');
 
-      // Wait one frame so styles apply
       await new Promise(r => requestAnimationFrame(r));
+      await waitForImages(tempDiv);
+      shrinkFilledAnswers(tempDiv);   // shrink long answers so nothing clips in the PDF
 
       const pageCanvas = await html2canvas(pageEl, captureOpts);
 
-      // Left half → A5 portrait page
       pdf.addPage();
-      const leftC = cropHalf(pageCanvas, 'left');
-      pdf.addImage(leftC.toDataURL('image/jpeg', 0.90), 'JPEG', 0, 0, A5W, A5H);
+      pdf.addImage(cropHalf(pageCanvas, 'left').toDataURL('image/jpeg', 0.85),  'JPEG', 0, 0, A5W, A5H);
+      pdf.addPage();
+      pdf.addImage(cropHalf(pageCanvas, 'right').toDataURL('image/jpeg', 0.85), 'JPEG', 0, 0, A5W, A5H);
 
-      // Right half → A5 portrait page
-      pdf.addPage();
-      const rightC = cropHalf(pageCanvas, 'right');
-      pdf.addImage(rightC.toDataURL('image/jpeg', 0.90), 'JPEG', 0, 0, A5W, A5H);
+      await yieldToUI();   // let the browser breathe / free memory between pages
     }
 
-    document.body.removeChild(tempDiv);
+    setStatus('⏳ Opslaan...');
     pdf.save('eline-vriendenboekje.pdf');
 
   } catch (err) {
     console.error('PDF generation failed:', err);
-    alert('Er ging iets mis bij het maken van de PDF. Probeer het opnieuw.');
+    alert('Er ging iets mis bij het maken van de PDF:\n\n' +
+          (err && err.message ? err.message : err) +
+          '\n\nProbeer het opnieuw (en sluit eventueel andere zware tabbladen).');
   } finally {
+    if (tempDiv && tempDiv.parentNode) tempDiv.parentNode.removeChild(tempDiv);
     btn.disabled = false;
     btn.innerHTML = origText;
   }

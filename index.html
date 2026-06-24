@@ -808,7 +808,7 @@ textarea.short { min-height: 0; flex: 1; }
         <img class="cover-photo" src="assets/photos/11.jpg" alt="Eline" onerror="this.style.display='none'">
         <img class="cover-photo" src="assets/photos/12.jpg" alt="Eline" onerror="this.style.display='none'">
       </div>
-      <div class="cover-date-box">Samengesteld ter ere van haar promotie door vrienden, familie en (ex-)collega's.</div>
+      <div class="cover-date-box">Samengesteld ter ere van haar promotie<br>door vrienden, familie en (ex-)collega's.</div>
     </div>
   </div>
 
@@ -1508,7 +1508,7 @@ async function savePdf() {
 
     // scale 2 keeps A5 crisp while halving memory vs scale 3 (matters at ~50 entries);
     // allowTaint:false means only clean images are drawn, so export never silently breaks.
-    const captureOpts = { scale: 1.8, useCORS: true, allowTaint: false, backgroundColor: '#ffffff', imageTimeout: 20000, logging: false };
+    const captureOpts = { scale: 2.5, useCORS: true, allowTaint: false, backgroundColor: '#ffffff', imageTimeout: 20000, logging: false };
 
     // Off-screen staging area
     tempDiv = document.createElement('div');
@@ -1524,7 +1524,10 @@ async function savePdf() {
       coverCanvas, Math.floor(coverCanvas.width / 4), 0, cHalf, coverCanvas.height,
       0, 0, cHalf, coverCanvas.height
     );
-    pdf.addImage(cCrop.toDataURL('image/jpeg', 0.82), 'JPEG', 0, 0, A5W, A5H);
+    pdf.addImage(cCrop.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, A5W, A5H);
+
+    // ── 1b. One intentional blank page after the cover ──
+    pdf.addPage();
 
     // ── 2. Entry pages — render off-screen, fit text, split left/right ──
     for (let i = 0; i < entries.length; i++) {
@@ -1544,15 +1547,26 @@ async function savePdf() {
       const pageCanvas = await html2canvas(pageEl, captureOpts);
 
       pdf.addPage();
-      pdf.addImage(cropHalf(pageCanvas, 'left').toDataURL('image/jpeg', 0.72),  'JPEG', 0, 0, A5W, A5H);
+      pdf.addImage(cropHalf(pageCanvas, 'left').toDataURL('image/jpeg', 0.88),  'JPEG', 0, 0, A5W, A5H);
       pdf.addPage();
-      pdf.addImage(cropHalf(pageCanvas, 'right').toDataURL('image/jpeg', 0.72), 'JPEG', 0, 0, A5W, A5H);
+      pdf.addImage(cropHalf(pageCanvas, 'right').toDataURL('image/jpeg', 0.88), 'JPEG', 0, 0, A5W, A5H);
 
       await yieldToUI();   // let the browser breathe / free memory between pages
     }
 
     setStatus('⏳ Opslaan...');
-    pdf.save('eline-vriendenboekje.pdf');
+    // Manual blob download with a delayed revoke. jsPDF's save() can revoke the
+    // object URL before the browser finishes writing a large file, leaving the
+    // download "unconfirmed"/broken — keeping the URL alive avoids that.
+    const blob = pdf.output('blob');
+    const url  = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'eline-vriendenboekje.pdf';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 120000);
 
   } catch (err) {
     console.error('PDF generation failed:', err);

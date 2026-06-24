@@ -111,7 +111,7 @@ body {
 .columns {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 4mm;
+  gap: 16mm;   /* straddles the PDF cut line → ~8mm clear margin each side of the fold */
   flex: 1;
   align-items: stretch;
 }
@@ -632,7 +632,7 @@ textarea.short { min-height: 0; flex: 1; }
 .filled-columns {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 4mm;
+  gap: 16mm;   /* straddles the PDF cut line → ~8mm clear margin each side of the fold */
   flex: 1;
   align-items: stretch;
 }
@@ -1504,11 +1504,11 @@ async function savePdf() {
 
     const { jsPDF } = window.jspdf;
     const A5W = 148.5, A5H = 210; // mm
-    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a5' });
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a5', compress: true });
 
     // scale 2 keeps A5 crisp while halving memory vs scale 3 (matters at ~50 entries);
     // allowTaint:false means only clean images are drawn, so export never silently breaks.
-    const captureOpts = { scale: 2, useCORS: true, allowTaint: false, backgroundColor: '#ffffff', imageTimeout: 20000, logging: false };
+    const captureOpts = { scale: 1.8, useCORS: true, allowTaint: false, backgroundColor: '#ffffff', imageTimeout: 20000, logging: false };
 
     // Off-screen staging area
     tempDiv = document.createElement('div');
@@ -1524,7 +1524,7 @@ async function savePdf() {
       coverCanvas, Math.floor(coverCanvas.width / 4), 0, cHalf, coverCanvas.height,
       0, 0, cHalf, coverCanvas.height
     );
-    pdf.addImage(cCrop.toDataURL('image/jpeg', 0.9), 'JPEG', 0, 0, A5W, A5H);
+    pdf.addImage(cCrop.toDataURL('image/jpeg', 0.82), 'JPEG', 0, 0, A5W, A5H);
 
     // ── 2. Entry pages — render off-screen, fit text, split left/right ──
     for (let i = 0; i < entries.length; i++) {
@@ -1544,9 +1544,9 @@ async function savePdf() {
       const pageCanvas = await html2canvas(pageEl, captureOpts);
 
       pdf.addPage();
-      pdf.addImage(cropHalf(pageCanvas, 'left').toDataURL('image/jpeg', 0.85),  'JPEG', 0, 0, A5W, A5H);
+      pdf.addImage(cropHalf(pageCanvas, 'left').toDataURL('image/jpeg', 0.72),  'JPEG', 0, 0, A5W, A5H);
       pdf.addPage();
-      pdf.addImage(cropHalf(pageCanvas, 'right').toDataURL('image/jpeg', 0.85), 'JPEG', 0, 0, A5W, A5H);
+      pdf.addImage(cropHalf(pageCanvas, 'right').toDataURL('image/jpeg', 0.72), 'JPEG', 0, 0, A5W, A5H);
 
       await yieldToUI();   // let the browser breathe / free memory between pages
     }
